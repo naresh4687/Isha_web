@@ -109,6 +109,34 @@ function Preferences({ user }: { user: User }) {
   );
 }
 
+function ChangeEmail() {
+  const qc = useQueryClient();
+  const me = useMe();
+  const [form, setForm] = useState({ newEmail: '', currentPassword: '' });
+  const change = useMutation({
+    mutationFn: () => api<{ user: User }>('/api/auth/email', { method: 'POST', json: form }),
+    onSuccess: (r) => {
+      qc.setQueryData(['me'], r.user);
+      setForm({ newEmail: '', currentPassword: '' });
+    },
+  });
+  const fe = change.error instanceof ApiError ? change.error.fieldErrors() : {};
+  return (
+    <form className="mt-4 space-y-3 border-b border-line pb-6" noValidate onSubmit={(e) => { e.preventDefault(); change.mutate(); }}>
+      <p className="text-sm text-muted">Signed in as <span className="font-medium text-ink">{me.data?.email}</span></p>
+      <Field label="New email" htmlFor="new-email" error={fe.newEmail}>
+        <input id="new-email" type="email" autoComplete="email" className="input" value={form.newEmail} onChange={(e) => setForm({ ...form, newEmail: e.target.value })} />
+      </Field>
+      <Field label="Current password" htmlFor="email-pw" error={fe.currentPassword} hint="You'll sign in with the new email from now on. Other devices will be signed out.">
+        <input id="email-pw" type="password" autoComplete="current-password" className="input" value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} />
+      </Field>
+      {change.error && !Object.keys(fe).length && <InlineError error={change.error} />}
+      {change.isSuccess && <p role="status" className="text-sm text-success">Email changed. Sign in with {change.data.user.email} from now on.</p>}
+      <button className="btn-ghost" disabled={change.isPending || !form.newEmail || !form.currentPassword}>{change.isPending ? 'Saving…' : 'Change email'}</button>
+    </form>
+  );
+}
+
 function Security() {
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -128,6 +156,7 @@ function Security() {
   return (
     <section className="card p-6">
       <h2 className="text-2xl">Security</h2>
+      <ChangeEmail />
       <form className="mt-4 space-y-3" noValidate onSubmit={(e) => { e.preventDefault(); change.mutate(); }}>
         <Field label="Current password" htmlFor="cur-pw" error={fe.currentPassword}>
           <input id="cur-pw" type="password" autoComplete="current-password" className="input" value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} />

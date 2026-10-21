@@ -131,6 +131,29 @@ describe('session revocation', () => {
     expect((await c.post('/api/auth/login', { email: a.user.email, password: 'N3wpassword' })).status).toBe(200);
   });
 
+  it('changes the sign-in email with the current password and signs out other sessions', async () => {
+    const a = await customer();
+    const b = client();
+    expect((await b.post('/api/auth/login', { email: a.user.email, password: 'Passw0rd!' })).status).toBe(200);
+    const other = await customer();
+    const newEmail = `New.${Date.now()}@Example.test`;
+    expect((await a.post('/api/auth/email', { currentPassword: 'nope', newEmail })).status).toBe(400);
+    expect((await a.post('/api/auth/email', { currentPassword: 'Passw0rd!', newEmail: 'not-an-email' })).status).toBe(400);
+    expect((await a.post('/api/auth/email', { currentPassword: 'Passw0rd!', newEmail: a.user.email })).status).toBe(400);
+    const dup = await a.post('/api/auth/email', { currentPassword: 'Passw0rd!', newEmail: other.user.email.toUpperCase() });
+    expect(dup.status).toBe(409);
+    expect(dup.body.error.details.fieldErrors.newEmail).toBeTruthy();
+    const ok = await a.post('/api/auth/email', { currentPassword: 'Passw0rd!', newEmail });
+    expect(ok.status).toBe(200);
+    expect(ok.body.user.email).toBe(newEmail.toLowerCase());
+    expect((await a.get('/api/auth/me')).body.user.email).toBe(newEmail.toLowerCase());
+    expect((await b.get('/api/auth/me')).body.user).toBeNull();
+    const c = client();
+    expect((await c.post('/api/auth/login', { email: a.user.email, password: 'Passw0rd!' })).status).toBe(401);
+    expect((await c.post('/api/auth/login', { email: newEmail, password: 'Passw0rd!' })).status).toBe(200);
+    expect((await client().post('/api/auth/email', { currentPassword: 'x', newEmail })).status).toBe(401);
+  });
+
   it('requires authentication', async () => {
     expect((await client().post('/api/auth/logout-all')).status).toBe(401);
     expect((await client().post('/api/auth/password', { currentPassword: 'x', newPassword: 'N3wpassword' })).status).toBe(401);

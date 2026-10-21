@@ -134,6 +134,37 @@ authRouter.post(
   }),
 );
 
+const changeEmailSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newEmail: z.string().trim().email('Enter a valid email address').max(254).transform((v) => v.toLowerCase()),
+});
+
+/** Changes the sign-in email (password required), signs out all other sessions, and re-issues this session's cookie. */
+authRouter.post(
+  '/email',
+  authLimiter,
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const body = parse(changeEmailSchema, req.body);
+    const row = await one('SELECT email, password_hash FROM users WHERE id = $1', [req.user!.id]);
+    if (!row?.password_hash.startsWith('$2') || !(await bcrypt.compare(body.currentPassword, row.password_hash))) {
+      throw new HttpError(400, 'Current password is incorrect.', 'validation_error', { fieldErrors: { currentPassword: ['Current password is incorrect.'] } });
+    }
+    if (row.email === body.newEmail) {
+      throw new HttpError(400, 'That is already your email.', 'validation_error', { fieldErrors: { newEmail: ['That is already your email.'] } });
+    }
+    const updated = await one(
+      'UPDATE users SET email = $2, token_version = token_version + 1 WHERE id = $1 RETURNING id, email, name, role, token_version',
+      [req.user!.id, body.newEmail],
+    ).catch((err) => {
+      if (err?.code === '23505') throw new HttpError(409, 'An account with that email already exists.', 'validation_error', { fieldErrors: { newEmail: ['An account with that email already exists.'] } });
+      throw err;
+    });
+    setAuthCookie(res, updated);
+    res.json({ user: { id: updated!.id, email: updated!.email, name: updated!.name, role: updated!.role } });
+  }),
+);
+
 const changePasswordSchema = z.object({ currentPassword: z.string().min(1).max(128), newPassword: password });
 
 /** Changes the password, signs out all other sessions, and re-issues this session's cookie. */

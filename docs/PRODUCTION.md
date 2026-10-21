@@ -43,7 +43,7 @@ Secrets are only read in jobs that run on `main` and are never echoed (deploy ho
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | push, PR, manual | `audit` (npm audit high+, pip-audit) · `server` (typecheck, 97 tests incl. image validation, image-sync dry run → `image-inventory` artifact) · `web` (unit tests, typecheck + build → `web-dist` artifact) · `ml` (ranking, cold start, evaluation, API) · `e2e` (Playwright: shopping, checkout, returns, images, accessibility, responsive → `playwright-report` artifact) · `deploy` (main only, after all of the above) |
+| `ci.yml` | push, PR, manual | `audit` (npm audit high+, pip-audit) · `server` (typecheck, 98 tests incl. image validation, image-sync dry run → `image-inventory` artifact) · `web` (unit tests, typecheck + build → `web-dist` artifact) · `ml` (ranking, cold start, evaluation, API) · `e2e` (Playwright: shopping, checkout, returns, images, accessibility, responsive → `playwright-report` artifact) · `deploy` (main only, after all of the above) |
 | `image-sync.yml` | manual only | dry run or apply of the image manifest against production; report kept 90 days |
 | `maintenance.yml` | daily / manual | event purge + ML retrain |
 | `keep-warm.yml` | every 10 min, 07:30–00:30 IST | pings the storefront so visitors avoid cold starts (kept within Render's 750 free hours) |
@@ -98,7 +98,7 @@ docker compose up -d db                                  # Postgres on :5433
 cd server && npm ci && npm run seed && npm run dev       # API on :4000 (applies migrations + image sync)
 cd web && npm ci && npm run dev                          # client on :5173
 cd ml && make venv && make serve                         # ML on :8001
-cd server && npm run typecheck && npm test               # 97 tests
+cd server && npm run typecheck && npm test               # 98 tests
 cd web && npm test && npm run build                      # 21 tests + build
 cd ml && make test                                       # 30 tests
 cd web && npx playwright test                            # 57 e2e tests + 2 device-specific skips (starts its own stack)
