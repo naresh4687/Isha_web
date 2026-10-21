@@ -218,7 +218,7 @@ jobs:
           SHA: ${{ steps.target.outputs.sha }}
         run: |
           trigger() { # name, hook, commit (the hook URL is a secret and is never echoed)
-            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$2&ref=$3")
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$2&ref=$3") || code=000
             echo "$1: deploy of $3 requested (HTTP $code)"
             case "$code" in
               2??) ;;
@@ -244,7 +244,7 @@ jobs:
             echo "::error::$1 did not go live with $SHA within 25 minutes; see its deploy logs on Render."; return 1
           }
           check() { # description, URL, expected content-type prefix
-            read -r code type < <(curl -s -o /dev/null -w '%{http_code} %{content_type}' --max-time 60 "$2")
+            read -r code type < <(curl -s -o /dev/null -w '%{http_code} %{content_type}\n' --max-time 60 "$2") || true
             if [ "$code" = "200" ] && [[ "$type" == $3* ]]; then echo "ok   $1"; else echo "::error::smoke test: $1 -> HTTP $code ($type)"; fail=1; fi
           }
           wait_for storefront "$STORE_URL/api/health"
@@ -264,7 +264,7 @@ jobs:
       - name: Roll back to the previously live commit
         if: failure() && steps.verify.conclusion == 'failure' && steps.target.outputs.store_prev != ''
         run: |
-          trigger() { code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$2&ref=$3"); echo "$1: rollback to $3 requested (HTTP $code)"; }
+          trigger() { code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$2&ref=$3") || code=000; echo "$1: rollback to $3 requested (HTTP $code)"; }
           trigger storefront "$STORE_HOOK" "${{ steps.target.outputs.store_prev }}"
           if [ "${{ steps.target.outputs.ml }}" = "true" ] && [ -n "${{ steps.target.outputs.ml_prev }}" ]; then trigger ml-service "$ML_HOOK" "${{ steps.target.outputs.ml_prev }}"; fi
           echo "### ❌ Smoke test failed for ${{ steps.target.outputs.sha }}; rolled back to ${{ steps.target.outputs.store_prev }}. Database migrations are additive, so the previous build runs on the migrated schema." >> "$GITHUB_STEP_SUMMARY"
