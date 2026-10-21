@@ -1,0 +1,30 @@
+# Keeps the free Render storefront awake so visitors don't wait ~50 s for a cold start.
+# Only the storefront is pinged: one service running all month (~744 h) fits Render's 750 free
+# instance-hours; keeping the ML service awake too would exceed them. The storefront already falls back
+# to popularity when the ML service is asleep, so a sleeping ML service doesn't slow pages down.
+# Set the repository variable KEEP_WARM=false to pause it, or STORE_URL to point it elsewhere.
+name: keep-warm
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    if: ${{ vars.KEEP_WARM != 'false' }}
+    timeout-minutes: 3
+    steps:
+      - name: Ping the storefront health check
+        run: |
+          url="${{ vars.STORE_URL || 'https://anvaya-1.onrender.com' }}/api/health"
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$url") || code=000
+            echo "attempt $i: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "::warning::Storefront did not answer 200 (suspended or deploying?)"
