@@ -23,7 +23,9 @@ class Dataset:
 
 
 def connect(url: str | None = None):
-    return psycopg.connect(url or settings.database_url, autocommit=True)
+    # prepare_threshold=None: no server-side prepared statements, which are unsafe behind
+    # transaction-pooling proxies such as PgBouncer (e.g. Neon's "-pooler" endpoints).
+    return psycopg.connect(url or settings.database_url, autocommit=True, prepare_threshold=None)
 
 
 def _df(conn, sql: str, params: tuple = ()) -> pd.DataFrame:
