@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Ping the storefront health check
         run: |
-          url="${{ vars.STORE_URL || 'https://anvaya-1.onrender.com' }}/api/health"
+          url="${{ vars.STORE_URL || 'https://anvaya-store.onrender.com' }}/api/health"
           for i in 1 2 3; do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$url") || code=000
             echo "attempt $i: HTTP $code"

@@ -7,14 +7,15 @@ Status (keep this section honest when things change):
 | Product photos | 59 of 70 products have licensed photos; 11 use generated illustrations (reasons in `docs/product-images.md`). |
 | CI (tests, audit, image validation, e2e) | Running on every push and PR. |
 | CD to Render | Built and gated. **Awaiting configuration:** the `RENDER_DEPLOY_HOOK_STORE` / `RENDER_DEPLOY_HOOK_ML` secrets are not set, so deploy runs are skipped with a warning. |
-| Live storefront (`anvaya-1.onrender.com`) | **Suspended in the Render dashboard**; it must be resumed before any deploy can succeed. Not verified live. |
+| ML service (`anvaya-ml.onrender.com`) | Live, healthy, reports its commit. |
+| Live storefront (`anvaya-store.onrender.com`) | **Not created yet**: the Blueprint's original name `anvaya` was taken on Render, so only `anvaya-ml` exists. Sync the Blueprint to create `anvaya-store`. Not verified live. |
 | Staging / preview environments | Not available: Render preview environments need a paid workspace. PRs are validated in CI only. |
 
 ## Architecture
 
 | Part | Where | Deployed by |
 |---|---|---|
-| React client + Express API (one service; Express serves `web/dist`) | Render web service (`anvaya-1`) | CD job, every release |
+| React client + Express API (one service; Express serves `web/dist`) | Render web service (`anvaya-store`) | CD job, every release |
 | ML / BI service (FastAPI) | Render web service (`anvaya-ml`) | CD job, only when `ml/` changed |
 | PostgreSQL | Neon | migrations run by the API on start |
 | Product photos | `web/public/assets/products/` (in the repo, shipped with the client build) | with the client |
@@ -33,7 +34,7 @@ Status (keep this section honest when things change):
 | `RENDER_DEPLOY_HOOK_ML` | secret | `ci.yml` deploy: ML deploy hook |
 | `DATABASE_URL` | secret | `image-sync.yml`, `maintenance.yml` |
 | `ML_SERVICE_URL`, `ML_SERVICE_TOKEN` | secrets | `maintenance.yml` (retrain) |
-| `STORE_URL`, `ML_URL` | variables | deploy, smoke tests, keep-warm (defaults: `https://anvaya-1.onrender.com`, `https://anvaya-ml.onrender.com`) |
+| `STORE_URL`, `ML_URL` | variables | deploy, smoke tests, keep-warm (defaults: `https://anvaya-store.onrender.com`, `https://anvaya-ml.onrender.com`) |
 | `MAINTENANCE_ENABLED`, `KEEP_WARM` | variables | turn scheduled workflows on/off |
 
 Secrets are only read in jobs that run on `main` and are never echoed (deploy hook URLs are passed straight to `curl`).
@@ -64,7 +65,7 @@ Render's own auto-deploy is off (`autoDeployTrigger: "off"` in `render.yaml`), s
 
 **Migrations** are forward-only, additive SQL files in `server/migrations/`, applied in a transaction when the API starts. Because they only add columns/tables, rolling the code back runs fine on the migrated schema. If a future migration must remove or rename something, ship it in two releases (stop using the column first, drop it later) so a rollback stays safe. Neon offers point-in-time restore (and branches) for data recovery.
 
-**First-time setup:** resume the storefront service in Render if it is suspended; add the two deploy-hook secrets; run `ci` manually once. Then confirm the `deploy` job summary says the commit is live and the smoke tests passed.
+**First-time setup:** in Render, open the Blueprint and click **Manual Sync** to create `anvaya-store` (enter the Neon `DATABASE_URL` when asked); add the two deploy-hook secrets; run `ci` manually once. Then confirm the `deploy` job summary says the commit is live and the smoke tests passed.
 
 ## Product images
 

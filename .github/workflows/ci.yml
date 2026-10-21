@@ -177,10 +177,10 @@ jobs:
       cancel-in-progress: false
     environment:
       name: production
-      url: ${{ vars.STORE_URL || 'https://anvaya-1.onrender.com' }}
+      url: ${{ vars.STORE_URL || 'https://anvaya-store.onrender.com' }}
     env:
       SHA: ${{ inputs.ref || github.sha }}
-      STORE_URL: ${{ vars.STORE_URL || 'https://anvaya-1.onrender.com' }}
+      STORE_URL: ${{ vars.STORE_URL || 'https://anvaya-store.onrender.com' }}
       ML_URL: ${{ vars.ML_URL || 'https://anvaya-ml.onrender.com' }}
       STORE_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STORE }}
       ML_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_ML }}

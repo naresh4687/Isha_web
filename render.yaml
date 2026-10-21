@@ -3,7 +3,7 @@
 # See docs/DEPLOY.md for the full walkthrough.
 services:
   - type: web
-    name: anvaya
+    name: anvaya-store # "anvaya" is taken on Render; this name sets the URL https://anvaya-store.onrender.com
     runtime: node
     plan: free
     region: singapore
@@ -22,8 +22,8 @@ services:
         generateValue: true
       - key: ML_SERVICE_TOKEN
         generateValue: true
-      - key: ML_SERVICE_URL # public URL of anvaya-ml, e.g. https://anvaya-ml.onrender.com
-        sync: false
+      - key: ML_SERVICE_URL # public URL of the anvaya-ml service
+        value: https://anvaya-ml.onrender.com
       - key: BRAND_NAME
         value: Anvaya
       - key: PAYMENT_PROVIDER # none = checkout disabled; razorpay = needs the keys below (test keys OK)
@@ -55,5 +55,5 @@ services:
       - key: ML_SERVICE_TOKEN
         fromService:
           type: web
-          name: anvaya
+          name: anvaya-store
           envVarKey: ML_SERVICE_TOKEN
