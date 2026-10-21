@@ -4,6 +4,7 @@ import { useCart, useCartMutations, useMe } from '../hooks/useStore';
 import { EmptyState, ErrorState, InlineError, QuantityStepper, Spinner } from '../components/ui';
 import { RecommendationRail } from '../components/RecommendationRail';
 import { inr } from '../lib/format';
+import { ProductImage } from '../components/ProductImage';
 import { recentlyViewed, track } from '../lib/tracking';
 
 export default function CartPage() {
@@ -40,8 +41,8 @@ export default function CartPage() {
           <ul className="divide-y divide-line border-y border-line" aria-label="Cart items">
             {c.lines.map((l) => (
               <li key={l.variantId} className="flex gap-4 py-5 sm:gap-6">
-                <Link to={`/products/${l.slug}`} className="w-24 shrink-0 overflow-hidden rounded-xl border border-line bg-sunken sm:w-28">
-                  <img src={l.image} alt="" className="aspect-square w-full object-cover" />
+                <Link to={`/products/${l.slug}`} tabIndex={-1} aria-hidden="true" className="w-24 shrink-0 overflow-hidden rounded-xl border border-line sm:w-28">
+                  <ProductImage src={l.image} alt="" slug={l.slug} sizes="112px" />
                 </Link>
                 <div className="flex flex-1 flex-col gap-2">
                   <div className="flex justify-between gap-4">

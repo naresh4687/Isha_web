@@ -88,7 +88,7 @@ export function createApp() {
   // In production the built storefront (web/dist) is served from the same origin as the API.
   const dist = process.env.WEB_DIST ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
   if (env.NODE_ENV === 'production' && fs.existsSync(path.join(dist, 'index.html'))) {
-    app.use(express.static(dist, { index: false, maxAge: '1y', immutable: true, setHeaders: (res, file) => file.endsWith('.html') && res.set('Cache-Control', 'no-cache') }));
+    app.use(express.static(dist, { index: false, maxAge: '1y', immutable: true, setHeaders: (res, file) => /\.(html|json)$/.test(file) && res.set('Cache-Control', 'no-cache') })); // JSON (e.g. the image manifest) is not content-hashed
     app.get('*', (_req, res) => res.set('Cache-Control', 'no-cache').sendFile(path.join(dist, 'index.html')));
   }
   app.use(errorHandler);

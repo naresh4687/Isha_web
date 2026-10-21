@@ -200,7 +200,7 @@ function Footer() {
   const cats = useCategories();
   const cols: [string, [string, string][]][] = [
     ['Shop', (cats.data ?? []).slice(0, 6).map((c) => [c.name, `/collections/${c.slug}`])],
-    ['Company', [['Our approach', '/about'], ['Sourcing', '/about#sourcing'], ['Journal', '/about#journal']]],
+    ['Company', [['Our approach', '/about'], ['Sourcing', '/about#sourcing'], ['Journal', '/about#journal'], ['Image credits', '/image-credits']]],
     ['Help', [['Contact & support', '/support'], ['Shipping & delivery', '/support#shipping'], ['Returns', '/support#returns'], ['Order history', '/account']]],
   ];
   return (
@@ -209,7 +209,7 @@ function Footer() {
         <div>
           <p className="font-serif text-3xl">{brand.name}</p>
           <p className="mt-3 max-w-xs text-sm text-muted">{brand.tagline}</p>
-          <p className="mt-6 text-xs text-muted">An independent demonstration store. Not affiliated with any other retailer. Product images are illustrations.</p>
+          <p className="mt-6 text-xs text-muted">An independent demonstration store. Not affiliated with any other retailer. Product photos are representative, freely licensed images (<Link className="underline underline-offset-2" to="/image-credits">credits</Link>); other items use illustrations.</p>
         </div>
         {cols.map(([title, links]) => (
           <div key={title}>

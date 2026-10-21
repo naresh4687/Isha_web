@@ -5,6 +5,7 @@ import { env } from '../../config/env.js';
 import { asyncHandler, cleanText, HttpError, notFound, parse } from '../../lib/http.js';
 import { requireAdmin } from '../../middleware/auth.js';
 import { cancelOrder, ORDER_COLUMNS, orderWithItems, refundOrder } from '../orders/service.js';
+import { primaryImage } from '../catalog/images.js';
 import { refundItems } from '../orders/refunds.js';
 
 export const adminRouter = Router();
@@ -54,13 +55,14 @@ adminRouter.get(
     const [{ total }] = await query(`SELECT count(DISTINCT p.id)::int AS total ${base}`, args);
     args.push(p.pageSize, (p.page - 1) * p.pageSize);
     const rows = await query(
-      `SELECT p.id, p.slug, p.title, p.is_active AS "isActive", c.name AS category, p.is_demo AS "isDemo",
+      `SELECT p.id, p.slug, p.title, p.images, p.is_active AS "isActive", c.name AS category, p.is_demo AS "isDemo",
               json_agg(json_build_object('id', v.id, 'sku', v.sku, 'name', v.name, 'pricePaise', v.price_paise,
                 'compareAtPaise', v.compare_at_paise, 'stock', v.stock) ORDER BY v.sort_order) AS variants
        ${base} GROUP BY p.id, c.name ORDER BY p.title LIMIT $${args.length - 1} OFFSET $${args.length}`,
       args,
     );
-    res.json({ items: rows, page: p.page, pageSize: p.pageSize, total, totalPages: Math.max(1, Math.ceil(total / p.pageSize)), lowStockThreshold: env.LOW_STOCK_THRESHOLD });
+    const items = rows.map(({ images, ...r }) => ({ ...r, ...primaryImage(r.slug, r.title, images), hasPhoto: images.length > 0 }));
+    res.json({ items, page: p.page, pageSize: p.pageSize, total, totalPages: Math.max(1, Math.ceil(total / p.pageSize)), lowStockThreshold: env.LOW_STOCK_THRESHOLD });
   }),
 );
 
@@ -69,7 +71,7 @@ adminRouter.get(
   asyncHandler(async (req, res) => {
     const id = parse(z.string().uuid(), req.params.id);
     const product = await one(
-      `SELECT p.id, p.slug, p.title, p.description, c.slug AS "categorySlug", p.subcategory, p.tags, p.attributes, p.is_active AS "isActive"
+      `SELECT p.id, p.slug, p.title, p.description, c.slug AS "categorySlug", p.subcategory, p.tags, p.attributes, p.is_active AS "isActive", p.images
        FROM products p JOIN categories c ON c.id = p.category_id WHERE p.id = $1`,
       [id],
     );

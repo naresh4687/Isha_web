@@ -5,6 +5,7 @@ import { api, ApiError } from '../api/client';
 import type { Order } from '../api/types';
 import { useCart, useMe, useSettings } from '../hooks/useStore';
 import { ErrorState, Field, InlineError, Spinner } from '../components/ui';
+import { ProductImage } from '../components/ProductImage';
 import { inr } from '../lib/format';
 
 interface CheckoutConfig {
@@ -216,7 +217,7 @@ export default function CheckoutPage() {
           <ul className="mt-4 space-y-3">
             {c.lines.map((l) => (
               <li key={l.variantId} className="flex items-center gap-3 text-sm">
-                <img src={l.image} alt="" className="h-12 w-12 rounded-lg border border-line object-cover" />
+                <ProductImage src={l.image} alt="" slug={l.slug} sizes="48px" className="aspect-square h-12 w-12 shrink-0 rounded-lg border border-line" />
                 <span className="flex-1">{l.title}{l.variantName !== 'Standard' ? ` · ${l.variantName}` : ''} × {l.quantity}</span>
                 <span className="tabular-nums">{inr(l.lineTotalPaise)}</span>
               </li>

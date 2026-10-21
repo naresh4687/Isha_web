@@ -3,6 +3,7 @@ import { HttpError } from '../../lib/http.js';
 import { env } from '../../config/env.js';
 import { cartLines, computeTotals, evaluateDiscount, getOrCreateCartId, type DiscountRow } from '../cart/service.js';
 import { providerStatus, razorpayCreateOrder } from '../payments/provider.js';
+import { primaryImage } from '../catalog/images.js';
 import { NON_RETURNABLE_CATEGORIES, refundItems, RETURN_WINDOW_DAYS } from './refunds.js';
 
 export const PENDING_ORDER_TTL_MIN = 30;
@@ -238,7 +239,7 @@ export async function orderWithItems(orderId: string) {
   const order = await one(`SELECT ${ORDER_COLUMNS}, o.user_id AS "userId", o.admin_note AS "adminNote" FROM orders o WHERE o.id = $1`, [orderId]);
   if (!order) return null;
   const items = await query(
-    `SELECT oi.id, oi.product_id AS "productId", p.slug, oi.title, oi.variant_name AS "variantName",
+    `SELECT oi.id, oi.product_id AS "productId", p.slug, p.images, oi.title, oi.variant_name AS "variantName",
             oi.unit_price_paise AS "unitPricePaise", oi.quantity, oi.line_total_paise AS "lineTotalPaise",
             oi.refunded_quantity AS "refundedQuantity", oi.refunded_paise AS "refundedPaise", oi.gst_rate_bps AS "gstRateBps",
             NOT (c.slug = ANY($2)) AS "returnable"
@@ -252,7 +253,7 @@ export async function orderWithItems(orderId: string) {
   );
   return {
     ...order,
-    items: items.map((i) => ({ ...i, image: `/media/products/${i.slug}/0.svg` })),
+    items: items.map(({ images, ...i }) => ({ ...i, ...primaryImage(i.slug, i.title, images) })),
     payment,
     cancellable: ['pending_payment', 'paid'].includes(order.status),
     ...(await returnInfo(order)),

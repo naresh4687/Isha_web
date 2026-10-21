@@ -1,0 +1,16 @@
+Q = {
+ "rudraksha-and-sandalwood-bracelet": ["sandalwood beads", "wooden bead bracelet", "prayer beads bracelet"],
+ "panchamukhi-bead-set-for-children": ["five mukhi rudraksha", "rudraksha bead close"],
+ "pure-camphor-tablets": ["camphor cubes", "karpooram", "camphor block"],
+ "engraved-copper-altar-plate": ["copper plate engraved", "copper tray", "brass puja plate"],
+ "guggul-dhoop-cones": ["incense cones", "dhoop", "cone incense"],
+ "rectangular-yoga-bolster": ["bolster cushion", "yoga props", "yoga bolster rectangular"],
+ "turmeric-latte-blend": ["turmeric milk", "haldi doodh", "golden milk turmeric"],
+ "wrap-around-cotton-dhoti-pants": ["veshti", "mundu cloth", "dhoti cloth folded"],
+ "handloom-cotton-cushion-cover": ["throw pillow", "cushion sofa", "pillow cover handloom"],
+ "braided-jute-rug": ["jute rug", "jute carpet", "coir mat"],
+ "copper-jug-and-tumbler-set": ["copper jug", "copper lota", "copper tumbler", "copper vessel"],
+ "carved-wooden-incense-holder": ["incense stick holder", "agarbatti stand", "incense burner wood"],
+ "organic-cotton-yoga-pants": ["harem pants", "cotton trousers", "pyjama trousers folded"],
+ "ubtan-bath-powder": ["gram flour", "besan", "chickpea flour"],
+}

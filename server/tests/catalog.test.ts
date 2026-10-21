@@ -13,7 +13,7 @@ describe('product listing', () => {
     expect(res.body.total).toBeGreaterThanOrEqual(70);
     expect(res.body.totalPages).toBe(Math.ceil(res.body.total / 5));
     const p = res.body.items[0];
-    expect(p).toMatchObject({ id: expect.any(String), slug: expect.any(String), pricePaise: expect.any(Number), image: expect.stringMatching(/^\/media\/products\//) });
+    expect(p).toMatchObject({ id: expect.any(String), slug: expect.any(String), pricePaise: expect.any(Number), image: expect.stringMatching(/^\/(media|assets)\/products\//) });
   });
 
   it('filters by category and subcategory', async () => {
@@ -77,7 +77,8 @@ describe('product listing', () => {
     const res = await c.get(`/api/products/${slug}`);
     expect(res.status).toBe(200);
     expect(res.body.product.variants.length).toBeGreaterThan(0);
-    expect(res.body.product.images).toHaveLength(4);
+    expect(res.body.product.images.length).toBeGreaterThan(0);
+    expect(res.body.product.images[0]).toMatchObject({ src: res.body.product.image, alt: expect.any(String), width: expect.any(Number) });
     expect(res.body.product.ratingDistribution).toHaveProperty('5');
     expect((await c.get('/api/products/does-not-exist')).status).toBe(404);
   });

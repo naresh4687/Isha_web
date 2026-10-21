@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
-import type { Paged, ProductDetail, Review } from '../api/types';
+import type { Paged, ProductDetail, ProductImage as ProductImageT, Review } from '../api/types';
+import { ProductImage } from '../components/ProductImage';
 import { useCartMutations, useMe, useWishlist } from '../hooks/useStore';
 import { Breadcrumbs, ErrorState, Field, InlineError, Price, QuantityStepper, Rating, Spinner } from '../components/ui';
 import { HeartIcon, StarIcon } from '../components/Icons';
@@ -10,21 +11,33 @@ import { RecommendationRail } from '../components/RecommendationRail';
 import { pushRecentlyViewed, recentlyViewed, track } from '../lib/tracking';
 import { date } from '../lib/format';
 
-function Gallery({ images, title }: { images: string[]; title: string }) {
+function Gallery({ images, slug }: { images: ProductImageT[]; slug: string }) {
   const [i, setI] = useState(0);
+  const cur = images[Math.min(i, images.length - 1)];
   return (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row">
-      <div className="flex gap-3 sm:flex-col" role="tablist" aria-label="Product images">
-        {images.map((src, n) => (
-          <button key={src} role="tab" aria-selected={i === n} aria-label={`Image ${n + 1} of ${images.length}`} onClick={() => setI(n)}
-            className={`w-16 overflow-hidden rounded-xl border bg-sunken sm:w-20 ${i === n ? 'border-ink' : 'border-line opacity-70 hover:opacity-100'}`}>
-            <img src={src} alt="" className="aspect-square w-full object-cover" />
-          </button>
-        ))}
+    <div>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row">
+        {images.length > 1 && (
+          <div className="flex gap-3 sm:flex-col" role="tablist" aria-label="Product images">
+            {images.map((img, n) => (
+              <button key={img.src} role="tab" aria-selected={i === n} aria-label={`Show image ${n + 1} of ${images.length}: ${img.alt}`} onClick={() => setI(n)}
+                className={`w-16 overflow-hidden rounded-xl border sm:w-20 ${i === n ? 'border-ink' : 'border-line opacity-70 hover:opacity-100'}`}>
+                <ProductImage src={img.src} alt="" slug={slug} sizes="80px" />
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex-1 overflow-hidden rounded-3xl border border-line" role="tabpanel">
+          <ProductImage src={cur.src} alt={cur.alt} slug={slug} eager width={cur.width} height={cur.height} sizes="(min-width: 1024px) 45vw, 100vw" />
+        </div>
       </div>
-      <div className="flex-1 overflow-hidden rounded-3xl border border-line bg-sunken">
-        <img src={images[i]} alt={`${title}, view ${i + 1}`} className="aspect-square w-full object-cover" width={600} height={600} />
-      </div>
+      <p className="mt-2 text-xs text-muted">
+        {cur.credit ? (
+          <>Representative photo: <a className="underline underline-offset-2" href={cur.credit.sourceUrl} target="_blank" rel="noopener noreferrer">{cur.credit.author || 'Wikimedia Commons'}</a>
+            {' · '}{cur.credit.licenseUrl ? <a className="underline underline-offset-2" href={cur.credit.licenseUrl} target="_blank" rel="noopener license noreferrer">{cur.credit.license}</a> : cur.credit.license}
+            {' · cropped and resized. '}<Link className="underline underline-offset-2" to="/image-credits">All image credits</Link></>
+        ) : 'Illustration — demo product, no photograph available.'}
+      </p>
     </div>
   );
 }
@@ -181,7 +194,7 @@ export default function ProductPage() {
     <div className="page pt-8">
       <Breadcrumbs items={[{ label: 'Home', to: '/' }, { label: p.category.name, to: `/collections/${p.category.slug}` }, { label: p.title }]} />
       <div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
-        <Gallery images={p.images} title={p.title} />
+        <Gallery key={p.id} images={p.images} slug={p.slug} />
         <div className="lg:pt-4">
           <p className="eyebrow">{p.category.name}{p.subcategory ? ` · ${p.subcategory}` : ''}</p>
           <h1 className="mt-2 text-4xl leading-tight sm:text-5xl">{p.title}</h1>

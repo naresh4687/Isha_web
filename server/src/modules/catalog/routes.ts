@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { one, query } from '../../db/pool.js';
 import { asyncHandler, notFound, parse } from '../../lib/http.js';
+import { productImages } from './images.js';
 import { CARD_FROM, CARD_SELECT, listProducts, SORTS, toCard } from './service.js';
 
 export const catalogRouter = Router();
@@ -79,7 +80,8 @@ catalogRouter.get(
         ...toCard(row),
         description: row.description,
         attributes: row.attributes,
-        images: [0, 1, 2, 3].map((n) => `/media/products/${row.slug}/${n}.svg`),
+        images: productImages(row.slug, row.title, row.images),
+        model3d: null, // no product has a 3D model; the storefront has no 3D viewer
         variants,
         ratingDistribution: Object.fromEntries([1, 2, 3, 4, 5].map((r) => [r, distribution.find((d) => d.rating === r)?.n ?? 0])),
       },

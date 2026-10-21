@@ -1,5 +1,6 @@
 import { query, type Queryable, pool } from '../../db/pool.js';
 import { env } from '../../config/env.js';
+import { primaryImage } from './images.js';
 
 export interface ProductCard {
   id: string;
@@ -16,12 +17,13 @@ export interface ProductCard {
   lowStock: boolean;
   isNew: boolean;
   image: string;
+  imageAlt: string;
   tags: string[];
 }
 
 /** Columns + joins producing a ProductCard row; the default variant sets the displayed price. */
 export const CARD_SELECT = `
-  p.id, p.slug, p.title, p.subcategory, p.tags, p.rating_avg AS "ratingAvg", p.rating_count AS "ratingCount",
+  p.id, p.slug, p.title, p.subcategory, p.tags, p.images, p.rating_avg AS "ratingAvg", p.rating_count AS "ratingCount",
   json_build_object('slug', c.slug, 'name', c.name) AS category,
   dv.price_paise AS "pricePaise", dv.compare_at_paise AS "compareAtPaise",
   coalesce(st.total_stock, 0) > 0 AS "inStock",
@@ -51,7 +53,7 @@ export function toCard(row: any): ProductCard {
     inStock: row.inStock,
     lowStock: row.lowStock,
     isNew: row.isNew,
-    image: `/media/products/${row.slug}/0.svg`,
+    ...primaryImage(row.slug, row.title, row.images),
     tags: row.tags,
   };
 }

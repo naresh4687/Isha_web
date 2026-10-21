@@ -11,6 +11,7 @@ import { AboutPage, AccountPage, AuthPage, NotFoundPage, SupportPage, WishlistPa
 // Checkout and admin (with charts) are split into separate chunks.
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const OrderPage = lazy(() => import('./pages/OrderPage'));
+const CreditsPage = lazy(() => import('./pages/CreditsPage'));
 const AdminLayout = lazy(() => import('./admin/AdminLayout').then((m) => ({ default: m.AdminLayout })));
 const AnalyticsPage = lazy(() => import('./admin/AnalyticsPage'));
 const InsightsPage = lazy(() => import('./admin/InsightsPage'));
@@ -53,6 +54,7 @@ export const routes = [
       { path: '/register', element: <AuthPage mode="register" key="register" /> },
       { path: '/support', element: <SupportPage /> },
       { path: '/about', element: <AboutPage /> },
+      { path: '/image-credits', element: S(<CreditsPage />) },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

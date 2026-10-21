@@ -287,7 +287,7 @@ export function AboutPage() {
       <div className="mt-6 space-y-5 text-lg leading-8 text-ink/85">
         <p>We stock a small range of everyday goods for practice, kitchen and home, chosen for how they are made and how long they last.</p>
         <p id="sourcing">We buy directly from producer groups and small workshops, and we describe products plainly: material, origin, size and care. We don't make health claims.</p>
-        <p id="journal">This is a demonstration store. Product names, descriptions and images are original placeholders.</p>
+        <p id="journal">This is a demonstration store. Product names and descriptions are original placeholders. Photos are representative, freely licensed images (see <Link className="underline underline-offset-2" to="/image-credits">image credits</Link>), not pictures of the exact items.</p>
       </div>
     </div>
   );

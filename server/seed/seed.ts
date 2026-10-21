@@ -3,6 +3,7 @@ import { pool, tx } from '../src/db/pool.js';
 import { migrate } from '../src/db/migrate.js';
 import { env } from '../src/config/env.js';
 import { catalog } from './catalog.js';
+import { applyImageManifest } from '../src/modules/catalog/images.js';
 import { makeRng } from './rng.js';
 
 const slugify = (s: string) =>
@@ -71,6 +72,7 @@ export async function seedCatalog() {
         }
       }
     }
+    await applyImageManifest(c);
 
     const codes: [string, 'percent' | 'fixed', number, number][] = [
       ['WELCOME10', 'percent', 10, 0],

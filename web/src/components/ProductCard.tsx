@@ -3,6 +3,7 @@ import type { ProductCard as P } from '../api/types';
 import { Badge, Price, Rating } from './ui';
 import { HeartIcon } from './Icons';
 import { track } from '../lib/tracking';
+import { ProductImage } from './ProductImage';
 
 interface Props {
   product: P;
@@ -19,14 +20,13 @@ export function ProductCard({ product: p, onWishlist, wishlisted, placement, pos
   };
   return (
     <article className="group relative flex flex-col">
-      <Link to={`/products/${p.slug}`} onClick={onClick} tabIndex={-1} aria-hidden="true" className="block overflow-hidden rounded-2xl border border-line bg-sunken">
-        <img
+      <Link to={`/products/${p.slug}`} onClick={onClick} tabIndex={-1} aria-hidden="true" className="block overflow-hidden rounded-2xl border border-line">
+        <ProductImage
           src={p.image}
           alt=""
-          loading="lazy"
-          width={600}
-          height={600}
-          className={`aspect-square w-full object-cover transition duration-500 group-hover:scale-[1.03] ${p.inStock ? '' : 'opacity-60 grayscale-[30%]'}`}
+          slug={p.slug}
+          sizes="(min-width: 1024px) 22vw, (min-width: 768px) 30vw, 46vw"
+          imgClassName={`motion-safe:duration-500 motion-safe:group-hover:scale-[1.03] ${p.inStock ? '' : 'grayscale-[30%] !opacity-60'}`}
         />
       </Link>
       <div className="pointer-events-none absolute left-3 top-3 flex flex-col items-start gap-1.5">

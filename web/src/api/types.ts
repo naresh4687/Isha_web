@@ -13,7 +13,24 @@ export interface ProductCard {
   lowStock: boolean;
   isNew: boolean;
   image: string;
+  imageAlt: string;
   tags: string[];
+}
+
+export interface ImageCredit {
+  author: string;
+  license: string;
+  licenseUrl: string | null;
+  sourceUrl: string;
+}
+
+export interface ProductImage {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  /** Set for licensed photographs; null for the store's own illustrations. */
+  credit: ImageCredit | null;
 }
 
 export interface Variant {
@@ -30,7 +47,9 @@ export interface Variant {
 export interface ProductDetail extends ProductCard {
   description: string;
   attributes: Record<string, string>;
-  images: string[];
+  images: ProductImage[];
+  /** URL of a GLB/glTF model; no product has one yet. */
+  model3d: string | null;
   variants: Variant[];
   ratingDistribution: Record<string, number>;
 }
@@ -73,6 +92,7 @@ export interface CartLine {
   stock: number;
   available: boolean;
   image: string;
+  imageAlt: string;
 }
 
 export interface Totals {
@@ -110,7 +130,7 @@ export interface Order {
   cancelledAt: string | null;
   items?: {
     id: string; productId: string; slug: string; title: string; variantName: string; unitPricePaise: number; quantity: number;
-    lineTotalPaise: number; image: string; refundedQuantity: number; refundedPaise: number; returnable: boolean;
+    lineTotalPaise: number; image: string; imageAlt: string; refundedQuantity: number; refundedPaise: number; returnable: boolean;
   }[];
   returns?: { id: string; items: { orderItemId: string; quantity: number }[]; reason: string; status: 'requested' | 'refunded' | 'rejected'; adminNote: string | null; createdAt: string }[];
   returnWindowOpen?: boolean;

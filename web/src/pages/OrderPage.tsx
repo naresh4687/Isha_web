@@ -4,6 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
 import type { Order } from '../api/types';
 import { ErrorState, Field, InlineError, Spinner } from '../components/ui';
+import { ProductImage } from '../components/ProductImage';
 import { date, inr, ORDER_STATUS } from '../lib/format';
 
 const STEPS = ['paid', 'shipped', 'delivered'] as const;
@@ -140,7 +141,7 @@ export default function OrderPage() {
         <ul className="divide-y divide-line border-y border-line">
           {o.items?.map((it) => (
             <li key={it.id} className="flex gap-4 py-4">
-              <img src={it.image} alt="" className="h-16 w-16 rounded-xl border border-line object-cover" />
+              <ProductImage src={it.image} alt="" slug={it.slug} sizes="64px" className="aspect-square h-16 w-16 shrink-0 rounded-xl border border-line" />
               <div className="flex-1">
                 <Link to={`/products/${it.slug}`} className="font-medium hover:underline">{it.title}</Link>
                 <p className="text-sm text-muted">{it.variantName !== 'Standard' ? `${it.variantName} · ` : ''}Qty {it.quantity}</p>

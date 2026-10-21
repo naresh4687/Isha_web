@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, ApiError, qs } from '../api/client';
 import { useCategories } from '../hooks/useStore';
 import { ErrorState, Field, InlineError, Pagination, Spinner } from '../components/ui';
+import { ProductImage } from '../components/ProductImage';
 import { date, inr, ORDER_STATUS } from '../lib/format';
 
 function TaxRates() {
@@ -78,7 +79,7 @@ export function ProductsAdmin() {
             <tbody>
               {list.data.items.map((p: any) => p.variants.map((v: any, i: number) => (
                 <tr key={v.id} className="border-b border-line/60">
-                  {i === 0 && <td className="p-3 align-top" rowSpan={p.variants.length}><Link className="font-medium hover:underline" to={`/admin/products/${p.id}`}>{p.title}</Link>{!p.isActive && <span className="ml-2 text-xs text-danger">hidden</span>}</td>}
+                  {i === 0 && <td className="p-3 align-top" rowSpan={p.variants.length}><div className="flex items-center gap-3"><ProductImage src={p.image} alt="" slug={p.slug} sizes="40px" className="aspect-square h-10 w-10 shrink-0 rounded-lg border border-line" /><div><Link className="font-medium hover:underline" to={`/admin/products/${p.id}`}>{p.title}</Link>{!p.isActive && <span className="ml-2 text-xs text-danger">hidden</span>}{!p.hasPhoto && <span className="block text-xs text-muted">illustration only</span>}</div></div></td>}
                   {i === 0 && <td className="p-3 align-top text-muted" rowSpan={p.variants.length}>{p.category}</td>}
                   <td className="p-3">{v.name} <span className="font-mono text-xs text-muted">{v.sku}</span></td>
                   <td className="p-3 tabular-nums">{inr(v.pricePaise)}</td>
@@ -152,6 +153,22 @@ export function ProductEditor() {
       <Field label="Tags (comma separated)" htmlFor="p-tags" hint="Used for search, collections and content-based recommendations."><input id="p-tags" className="input" value={p.tags} onChange={(e) => upd({ tags: e.target.value })} /></Field>
       <Field label="Attributes (one “key: value” per line)" htmlFor="p-attr"><textarea id="p-attr" className="input min-h-20 font-mono text-xs" value={p.attributes} onChange={(e) => upd({ attributes: e.target.value })} /></Field>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.isActive} onChange={(e) => upd({ isActive: e.target.checked })} />Visible in store</label>
+      {!isNew && q.data && (
+        <section className="card p-4" aria-labelledby="p-img">
+          <h2 id="p-img" className="font-sans text-sm font-semibold">Images</h2>
+          {q.data.images.length ? (
+            <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {q.data.images.map((img: any, n: number) => (
+                <li key={img.src} className="text-xs text-muted">
+                  <ProductImage src={img.src} alt={img.alt} slug={q.data.slug} sizes="120px" className="aspect-square rounded-lg border border-line" />
+                  <p className="mt-1">{n === 0 ? 'Primary · ' : ''}{img.credit?.license ?? 'own work'}</p>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="mt-2 text-xs text-muted">No photos — the store shows generated illustrations.</p>}
+          <p className="mt-2 text-xs text-muted">Photos are managed in web/public/assets/products/manifest.json and synced on server start.</p>
+        </section>
+      )}
       <fieldset className="card space-y-3 p-4">
         <legend className="px-1 text-sm font-semibold">Variants</legend>
         {p.variants.map((v: VariantForm, i: number) => (

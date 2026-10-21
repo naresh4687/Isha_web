@@ -1,5 +1,6 @@
 import { one, query, tx, type Queryable, pool } from '../../db/pool.js';
 import { HttpError } from '../../lib/http.js';
+import { primaryImage } from '../catalog/images.js';
 import { env } from '../../config/env.js';
 
 export const MAX_LINE_QTY = 20;
@@ -41,6 +42,7 @@ export interface CartLine {
   stock: number;
   available: boolean;
   image: string;
+  imageAlt: string;
   gstRateBps: number | null;
 }
 
@@ -48,7 +50,7 @@ export async function cartLines(cartId: string, client: Queryable = pool, lock =
   const rows = await query(
     `SELECT ci.variant_id AS "variantId", p.id AS "productId", p.slug, p.title, v.name AS "variantName",
             v.price_paise AS "unitPricePaise", v.compare_at_paise AS "compareAtPaise", ci.quantity,
-            v.stock, p.is_active AS active, c.gst_rate_bps AS "gstRateBps"
+            v.stock, p.is_active AS active, p.images, c.gst_rate_bps AS "gstRateBps"
      FROM cart_items ci JOIN product_variants v ON v.id = ci.variant_id JOIN products p ON p.id = v.product_id
      JOIN categories c ON c.id = p.category_id
      WHERE ci.cart_id = $1 ORDER BY ci.added_at ${lock ? 'FOR UPDATE OF v' : ''}`,
@@ -67,7 +69,7 @@ export async function cartLines(cartId: string, client: Queryable = pool, lock =
     lineTotalPaise: r.unitPricePaise * r.quantity,
     stock: r.stock,
     available: r.active && r.stock >= r.quantity,
-    image: `/media/products/${r.slug}/0.svg`,
+    ...primaryImage(r.slug, r.title, r.images),
     gstRateBps: r.gstRateBps,
   }));
 }

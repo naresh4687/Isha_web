@@ -1,10 +1,13 @@
 import { env } from './config/env.js';
 import { createApp } from './app.js';
 import { migrate } from './db/migrate.js';
+import { applyImageManifest } from './modules/catalog/images.js';
 import { expirePendingOrders } from './modules/orders/service.js';
 import { providerStatus } from './modules/payments/provider.js';
 
 await migrate();
+const synced = await applyImageManifest();
+if (synced) console.log(`product images: updated ${synced} product(s) from the asset manifest`);
 const app = createApp();
 app.listen(env.PORT, () => {
   const p = providerStatus();
