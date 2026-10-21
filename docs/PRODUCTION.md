@@ -6,9 +6,9 @@ Status (keep this section honest when things change):
 |---|---|
 | Product photos | 59 of 70 products have licensed photos; 11 use generated illustrations (reasons in `docs/product-images.md`). |
 | CI (tests, audit, image validation, e2e) | Running on every push and PR. |
-| CD to Render | Built and gated. **Awaiting configuration:** the `RENDER_DEPLOY_HOOK_STORE` / `RENDER_DEPLOY_HOOK_ML` secrets are not set, so deploy runs are skipped with a warning. |
+| CD to Render | Built and gated. **Awaiting configuration:** add the `RENDER_DEPLOY_HOOK_STORE` / `RENDER_DEPLOY_HOOK_ML` secrets; until then deploy runs are skipped with a warning and deploys are manual from the Render dashboard. |
 | ML service (`anvaya-ml.onrender.com`) | Live, healthy, reports its commit. |
-| Live storefront (`anvaya-store.onrender.com`) | **Not created yet**: the Blueprint's original name `anvaya` was taken on Render, so only `anvaya-ml` exists. Sync the Blueprint to create `anvaya-store`. Not verified live. |
+| Live storefront (`anvaya-store.onrender.com`) | **Live and verified 2026-10-21** at commit `989bebc`: pages, API, 59/70 product photos, image manifest and model-based recommendations all return 200; no broken images. |
 | Staging / preview environments | Not available: Render preview environments need a paid workspace. PRs are validated in CI only. |
 
 ## Architecture
