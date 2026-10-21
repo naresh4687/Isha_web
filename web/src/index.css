@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --canvas: 247 243 236;
+    --surface: 255 255 255;
+    --sunken: 239 233 223;
+    --ink: 36 33 30;
+    --muted: 110 102 94;
+    --line: 226 218 205;
+    --accent: 140 82 52;
+    --accent-ink: 255 250 244;
+    --sage: 95 112 88;
+    --danger: 168 50 40;
+    --success: 54 110 66;
+    /* Chart series (validated: scripts/validate_palette.js, light vs #ffffff) */
+    --series-1: #b0602f;
+    --series-2: #0b7fa6;
+    --grid: #ebe4d8;
+    color-scheme: light;
+  }
+  .dark {
+    --canvas: 24 22 20;
+    --surface: 33 30 27;
+    --sunken: 42 38 34;
+    --ink: 238 232 222;
+    --muted: 170 160 148;
+    --line: 62 56 50;
+    --accent: 214 156 112;
+    --accent-ink: 30 22 16;
+    --sage: 150 170 140;
+    --danger: 240 120 105;
+    --success: 120 190 130;
+    /* Validated against dark surface #211e1b */
+    --series-1: #d0784a;
+    --series-2: #2fa3c4;
+    --grid: #3a352f;
+    color-scheme: dark;
+  }
+  html { @apply bg-canvas text-ink antialiased; }
+  body { @apply font-sans text-[15px] leading-relaxed min-h-screen; }
+  h1, h2, h3 { @apply font-serif font-semibold tracking-tight; }
+  :focus-visible { @apply outline outline-2 outline-offset-2 outline-accent; }
+  ::selection { @apply bg-accent/20; }
+}
+
+@layer components {
+  .page { @apply mx-auto max-w-page px-4 sm:px-6 lg:px-10; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-ink text-canvas hover:bg-ink/85; }
+  .btn-accent { @apply btn bg-accent text-accent-ink hover:bg-accent/90; }
+  .btn-ghost { @apply btn border border-line bg-surface hover:border-ink/40; }
+  .btn-link { @apply text-sm font-medium underline decoration-line underline-offset-4 hover:decoration-ink; }
+  .input { @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm placeholder:text-muted/70 focus:border-ink/50 focus:outline-none focus-visible:outline-accent; }
+  .label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted; }
+  .card { @apply rounded-2xl border border-line bg-surface; }
+  .eyebrow { @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-muted; }
+  .skeleton { @apply animate-pulse rounded-lg bg-sunken; }
+}

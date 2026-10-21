@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+*.log
+.venv/
+__pycache__/
+.pytest_cache/
+ml/artifacts/*
+!ml/artifacts/.gitkeep
+web/test-results/
+web/playwright-report/
+*.tsbuildinfo
