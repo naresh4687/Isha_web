@@ -102,7 +102,7 @@ curl -X POST -H "X-Service-Token: $ML_SERVICE_TOKEN" localhost:8001/v1/model/rel
 | Suite | Command | Result (2026-10-21) |
 |---|---|---|
 | Server: Vitest + Supertest against an isolated `anvaya_test` DB (schema rebuilt per run) | `cd server && npm test` | **90 passed** (10 files) |
-| ML: pytest, in-memory fixtures | `cd ml && make test` | **29 passed** |
+| ML: pytest, in-memory fixtures | `cd ml && make test` | **30 passed** |
 | Web unit: Vitest + Testing Library | `cd web && npm test` | **15 passed** |
 | E2E + responsive + axe a11y: Playwright, isolated `anvaya_e2e` DB, API :4100, Vite :5174, ML deliberately offline | `cd web && npx playwright install chromium && npm run test:e2e` | **51 passed, 2 skipped** (device-specific) |
 | Typecheck | `npm run typecheck` in server and web | clean |
@@ -125,11 +125,14 @@ What the suites cover:
 
 ## Deployment
 
-1. Provision PostgreSQL 16 and set the server env (`NODE_ENV=production`, a strong `JWT_SECRET`, `COOKIE_SECURE=true`, `PAYMENT_PROVIDER=razorpay` with keys, `ADMIN_PASSWORD`).
-2. `cd web && npm ci && npm run build`, then `cd server && npm ci && npm run seed && npm start`. Express serves `web/dist` and `/api` from one origin.
-3. Run the ML service privately: `uvicorn app.api:app --host 127.0.0.1 --port 8001` (or a private network). Never expose it publicly.
-4. Put both behind HTTPS (e.g. Caddy or Nginx). The app sets `trust proxy 1`.
-5. Schedule `npm run purge-events` daily and `python -m app.train` followed by `/v1/model/reload` nightly.
+**Free hosting (Render + Neon + GitHub Actions):** follow [`docs/DEPLOY.md`](docs/DEPLOY.md). `render.yaml` defines both services as a Render Blueprint.
+
+Any other host:
+1. Provision PostgreSQL 16 and set the server env (`NODE_ENV=production`, a strong `JWT_SECRET`, `PAYMENT_PROVIDER=razorpay` with keys or `none`, and `ADMIN_PASSWORD` for seeding).
+2. Run `cd web && npm ci --include=dev && npm run build`, then `cd server && npm ci --omit=dev && npm run seed && npm start`. Express serves `web/dist` and `/api` from one origin, and migrations run on start.
+3. Run the ML service with `uvicorn app.api:app --host 0.0.0.0 --port $PORT`. It trains in the background on first start, and its endpoints need `X-Service-Token`.
+4. Serve everything over HTTPS (cookies are `Secure` in production). The app sets `trust proxy 1`.
+5. Schedule `npm run purge-events` daily and `POST /v1/model/retrain` nightly (see `.github/workflows/maintenance.yml`).
 
 ## Security notes & limitations
 

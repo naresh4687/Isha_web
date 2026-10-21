@@ -1,0 +1,59 @@
+# Render Blueprint: storefront + API (one service) and the ML service, both on the free plan.
+# Database: Neon (free) — paste its connection string when Render prompts for DATABASE_URL.
+# See docs/DEPLOY.md for the full walkthrough.
+services:
+  - type: web
+    name: anvaya
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: cd web && npm ci --include=dev && npm run build && cd ../server && npm ci --omit=dev
+    startCommand: cd server && npm start # applies pending migrations, then listens on $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.1
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL # Neon connection string, ending in ?sslmode=require
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ML_SERVICE_TOKEN
+        generateValue: true
+      - key: ML_SERVICE_URL # public URL of anvaya-ml, e.g. https://anvaya-ml.onrender.com
+        sync: false
+      - key: BRAND_NAME
+        value: Anvaya
+      - key: PAYMENT_PROVIDER # none = checkout disabled; razorpay = needs the keys below (test keys OK)
+        value: none
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: SELLER_STATE
+        sync: false
+
+  - type: web
+    name: anvaya-ml
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: ml
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL # same Neon connection string
+        sync: false
+      - key: ML_SERVICE_TOKEN
+        fromService:
+          type: web
+          name: anvaya
+          envVarKey: ML_SERVICE_TOKEN

@@ -57,10 +57,21 @@ def load_or_train():
     state.model, state.report = model, report
 
 
+def _background_load():
+    try:
+        with state.lock:
+            if state.model is None:
+                load_or_train()
+    except Exception:  # keep serving 503s (backend falls back) rather than crash the process
+        log.exception("model load/train failed")
+
+
 @asynccontextmanager
 async def lifespan(_app):
+    # Load or train in the background so the port opens immediately; until the model is ready,
+    # recommendation endpoints answer 503 and the backend serves its popularity fallback.
     if state.model is None:
-        load_or_train()
+        threading.Thread(target=_background_load, daemon=True).start()
     yield
 
 
@@ -167,6 +178,17 @@ def reload():
     with state.lock:
         load_or_train()
     return {"version": state.model.version}
+
+
+@app.post("/v1/model/retrain", dependencies=[Depends(require_token)])
+def retrain():
+    """Train + evaluate on current data and swap the model in. Used by the scheduled job, since
+    hosts with ephemeral disks lose artifacts produced elsewhere."""
+    with state.lock:
+        with state.conn() as c:
+            out = train(c)
+        state.model, state.report = load_latest()
+    return {"version": state.model.version, "evaluation_status": out["evaluation"].get("status")}
 
 
 # --- BI -----------------------------------------------------------------------------------------------

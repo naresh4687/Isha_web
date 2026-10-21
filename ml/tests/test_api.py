@@ -46,3 +46,16 @@ def test_endpoints_return_ids_scores_reasons_only(client):
 
 def test_health_is_public(client):
     assert client.get("/health").json() == {"ok": True, "model_loaded": True, "version": "vtest"}
+
+
+def test_retrain_requires_token_and_swaps_model(client, monkeypatch):
+    from contextlib import nullcontext
+
+    assert client.post("/v1/model/retrain").status_code == 401
+    new_model = HybridRecommender.fit(make_dataset(seed=9), NOW, version="vnew")
+    monkeypatch.setattr(api.state, "conn_factory", lambda: nullcontext(None))
+    monkeypatch.setattr(api, "train", lambda c: {"evaluation": {"status": "ok"}})
+    monkeypatch.setattr(api, "load_latest", lambda: (new_model, {"ok": True}))
+    r = client.post("/v1/model/retrain", headers=H)
+    assert r.status_code == 200 and r.json() == {"version": "vnew", "evaluation_status": "ok"}
+    assert client.get("/health").json()["version"] == "vnew"
