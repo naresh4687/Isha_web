@@ -12,8 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ vars.MAINTENANCE_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
