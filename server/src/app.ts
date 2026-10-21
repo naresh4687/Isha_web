@@ -66,7 +66,7 @@ export function createApp() {
   app.get('/api/health', async (_req, res) => {
     try {
       await pool.query('SELECT 1');
-      res.json({ ok: true });
+      res.json({ ok: true, commit: process.env.RENDER_GIT_COMMIT ?? null }); // lets CD verify which build is live
     } catch {
       res.status(503).json({ ok: false });
     }

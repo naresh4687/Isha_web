@@ -44,8 +44,11 @@ def test_endpoints_return_ids_scores_reasons_only(client):
     assert client.get("/v1/recommend/trending?k=999", headers=H).status_code == 422
 
 
-def test_health_is_public(client):
-    assert client.get("/health").json() == {"ok": True, "model_loaded": True, "version": "vtest"}
+def test_health_is_public(client, monkeypatch):
+    monkeypatch.delenv("RENDER_GIT_COMMIT", raising=False)
+    assert client.get("/health").json() == {"ok": True, "model_loaded": True, "version": "vtest", "commit": None}
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "abc123")  # set by Render; CD uses it to confirm the live build
+    assert client.get("/health").json()["commit"] == "abc123"
 
 
 def test_retrain_requires_token_and_swaps_model(client, monkeypatch):

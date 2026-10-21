@@ -3,6 +3,7 @@ service token; it never returns personal data beyond product ids, scores and rea
 from __future__ import annotations
 
 import hmac
+import os
 import logging
 import threading
 import time
@@ -127,7 +128,8 @@ def _uuid_or_none(v: str | None) -> str | None:
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model_loaded": state.model is not None, "version": state.model.version if state.model else None}
+    return {"ok": True, "model_loaded": state.model is not None, "version": state.model.version if state.model else None,
+            "commit": os.getenv("RENDER_GIT_COMMIT")}  # lets CD verify which build is live
 
 
 @app.get("/v1/recommend/personalized", dependencies=[Depends(require_token)])

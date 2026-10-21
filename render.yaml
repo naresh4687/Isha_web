@@ -10,7 +10,7 @@ services:
     buildCommand: cd web && npm ci --include=dev && npm run build && cd ../server && npm ci --omit=dev
     startCommand: cd server && npm start # applies pending migrations, then listens on $PORT
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeployTrigger: "off" # deploys come from the CI/CD workflow after tests pass (see docs/DEPLOY.md)
     envVars:
       - key: NODE_VERSION
         value: 20.18.1
@@ -46,7 +46,7 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.api:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeployTrigger: "off" # deploys come from the CI/CD workflow after tests pass (see docs/DEPLOY.md)
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7

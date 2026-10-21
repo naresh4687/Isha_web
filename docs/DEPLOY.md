@@ -57,6 +57,22 @@
    - variable: `MAINTENANCE_ENABLED` = `true`.
 2. The workflow runs daily at 03:00 IST. It deletes events past `EVENT_RETENTION_DAYS` and asks the ML service to retrain. You can also run it manually from the Actions tab.
 
+## 4. CI/CD (GitHub Actions → Render)
+`.github/workflows/ci.yml` tests every push and pull request (server, web, ML, end-to-end). A push to `main` that passes all four jobs is deployed automatically:
+
+1. **Deploy**: triggers Render to build **exactly that commit**. The storefront service (React client + API) always deploys; the ML service deploys only when `ml/` changed since the commit it is running.
+2. **Verify**: waits until `/api/health` (and the ML `/health`) report the new commit (`RENDER_GIT_COMMIT`).
+3. **Smoke test**: home page, a client route, the catalogue API, a product photo, the image manifest, recommendations and ML health must all answer 200.
+
+Render's own auto-deploy is off (`autoDeployTrigger: "off"` in `render.yaml`), so untested code never reaches production.
+
+**One-time setup** (repo **Settings → Secrets and variables → Actions**):
+- Secret `RENDER_DEPLOY_HOOK_STORE`: the storefront service's **Settings → Deploy Hook** URL on Render.
+- Secret `RENDER_DEPLOY_HOOK_ML`: the ML service's deploy hook URL.
+- Optional variables `STORE_URL` / `ML_URL` if the services' URLs differ from `https://anvaya-1.onrender.com` and `https://anvaya-ml.onrender.com`.
+
+To redeploy without a code change, run the **ci** workflow from the Actions tab (this also redeploys the ML service). `keep-warm.yml` pings the storefront every 10 minutes so the free instance does not sleep.
+
 ## Troubleshooting
 | Symptom | Check |
 |---|---|

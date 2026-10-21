@@ -83,6 +83,14 @@ describe('product listing', () => {
     expect((await c.get('/api/products/does-not-exist')).status).toBe(404);
   });
 
+  it('reports health and the deployed commit (used by CD to confirm the live build)', async () => {
+    delete process.env.RENDER_GIT_COMMIT;
+    expect((await c.get('/api/health')).body).toEqual({ ok: true, commit: null });
+    process.env.RENDER_GIT_COMMIT = 'abc123';
+    expect((await c.get('/api/health')).body.commit).toBe('abc123');
+    delete process.env.RENDER_GIT_COMMIT;
+  });
+
   it('lists categories with the nine-category taxonomy', async () => {
     const res = await c.get('/api/categories');
     expect(res.body.categories.map((x: any) => x.name)).toEqual([

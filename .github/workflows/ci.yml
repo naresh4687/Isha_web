@@ -1,5 +1,8 @@
-# Continuous integration: typecheck, unit tests, build and end-to-end tests on every push and PR.
+# CI/CD. Every push and PR: typecheck, unit tests, build and end-to-end tests.
+# Pushes to main (or a manual run) that pass everything are then deployed to Render and smoke-tested.
 # Versions match render.yaml (Node 20, Python 3.12). Postgres runs as a throwaway service container.
+# Deploy setup (repo Settings -> Secrets and variables -> Actions): secrets RENDER_DEPLOY_HOOK_STORE and
+# RENDER_DEPLOY_HOOK_ML (each service's Settings -> Deploy Hook); optional variables STORE_URL, ML_URL.
 name: ci
 
 on:
@@ -114,3 +117,90 @@ jobs:
           name: playwright-traces
           path: web/test-results/
           retention-days: 7
+
+  deploy:
+    # The storefront service builds the React client and the API together, so one deploy updates both.
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [server, web, ml, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ vars.STORE_URL || 'https://anvaya-1.onrender.com' }}
+    env:
+      SHA: ${{ github.sha }}
+      STORE_URL: ${{ vars.STORE_URL || 'https://anvaya-1.onrender.com' }}
+      ML_URL: ${{ vars.ML_URL || 'https://anvaya-ml.onrender.com' }}
+      STORE_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STORE }}
+      ML_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_ML }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # to diff ml/ against the commit the ML service is running
+
+      - name: Check deploy hooks are configured
+        run: |
+          missing=""
+          [ -n "$STORE_HOOK" ] || missing="$missing RENDER_DEPLOY_HOOK_STORE"
+          [ -n "$ML_HOOK" ] || missing="$missing RENDER_DEPLOY_HOOK_ML"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing. Copy each Render service's Settings -> Deploy Hook URL into Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Decide whether the ML service needs a deploy
+        id: ml
+        run: |
+          live=$(curl -s --max-time 90 "$ML_URL/health" | python3 -c "import json,sys; print(json.load(sys.stdin).get('commit') or '')" 2>/dev/null || true)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$live" ] || ! git cat-file -e "$live^{commit}" 2>/dev/null; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"; echo "ML: deploying (live commit '${live:-unknown}')"
+          elif git diff --quiet "$live" "$SHA" -- ml/ render.yaml; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"; echo "ML: no changes under ml/ since live commit $live, skipping"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"; echo "ML: ml/ changed since live commit $live, deploying"
+          fi
+
+      - name: Trigger Render deploys of this exact commit
+        run: |
+          trigger() { # name, hook URL
+            code=$(curl -s -o resp.json -w '%{http_code}' -X POST "$2&ref=$SHA")
+            echo "$1: HTTP $code"; cat resp.json; echo
+            case "$code" in
+              2??) ;;
+              409) echo "::error::$1 is suspended on Render. Resume it in the Render dashboard, then re-run this job."; exit 1 ;;
+              *) echo "::error::$1 deploy hook failed (HTTP $code)"; exit 1 ;;
+            esac
+          }
+          trigger storefront "$STORE_HOOK"
+          if [ "${{ steps.ml.outputs.deploy }}" = "true" ]; then trigger ml-service "$ML_HOOK"; fi
+
+      - name: Wait until the new build is live
+        run: |
+          wait_for() { # name, health URL
+            for i in $(seq 1 75); do
+              live=$(curl -s --max-time 60 "$2" | python3 -c "import json,sys; print(json.load(sys.stdin).get('commit') or '')" 2>/dev/null || true)
+              [ "$live" = "$SHA" ] && { echo "$1 is live at $SHA"; return 0; }
+              echo "$1: waiting (live: ${live:-none})"; sleep 20
+            done
+            echo "::error::$1 did not go live with $SHA within 25 minutes; check its deploy logs on Render."; return 1
+          }
+          wait_for storefront "$STORE_URL/api/health"
+          if [ "${{ steps.ml.outputs.deploy }}" = "true" ]; then wait_for ml-service "$ML_URL/health"; fi
+
+      - name: Smoke-test production
+        run: |
+          check() { # description, URL, expected content-type prefix
+            read -r code type < <(curl -s -o /tmp/body -w '%{http_code} %{content_type}' --max-time 60 "$2")
+            if [ "$code" = "200" ] && [[ "$type" == $3* ]]; then echo "ok   $1"; else echo "::error::$1 -> HTTP $code ($type)"; fail=1; fi
+          }
+          fail=0
+          check "storefront page"   "$STORE_URL/"                                   "text/html"
+          check "client route"      "$STORE_URL/products/copper-water-bottle-1-l"   "text/html"
+          check "catalogue API"     "$STORE_URL/api/products?pageSize=1"            "application/json"
+          img=$(curl -s --max-time 60 "$STORE_URL/api/products/copper-water-bottle-1-l" | python3 -c "import json,sys; print(json.load(sys.stdin)['product']['image'])")
+          echo "canonical image: $img"
+          check "product photo"     "$STORE_URL$img"                                "image/"
+          check "image manifest"    "$STORE_URL/assets/products/manifest.json"      "application/json"
+          check "recommendations"   "$STORE_URL/api/recommendations/trending?k=4"   "application/json"
+          check "ML service health" "$ML_URL/health"                                "application/json"
+          exit $fail
