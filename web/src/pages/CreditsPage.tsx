@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ErrorState, Spinner } from '../components/ui';
+import { ErrorState } from '../components/ui';
 import { ProductImage } from '../components/ProductImage';
 
 interface ManifestImage {
   file: string;
   alt: string;
-  source: { title: string; page: string; author: string; license: string; licenseUrl: string | null };
+  source: { title: string; page: string; author: string; license: string; licenseUrl: string | null; site?: string };
 }
 interface Manifest {
   policy: string;
@@ -30,11 +30,15 @@ export default function CreditsPage() {
       <p className="eyebrow">About our images</p>
       <h1 className="mt-2 text-5xl">Image credits</h1>
       <p className="mt-4 max-w-2xl text-ink/85">
-        This is a demonstration store. Product photos are representative images under free licences from Wikimedia Commons, used to
-        show the kind of item each listing describes; they do not show the exact item sold. Photos are cropped and resized.
+        This is a demonstration store. Product photos are representative images under free licences (public domain, CC0, CC BY,
+        CC BY-SA) from Wikimedia Commons, Flickr and the WordPress Photo Directory, used to show the kind of item each listing describes; they do not show the exact item sold. Photos are cropped and resized.
         Items without a suitable licensed photo use the store's own illustrations.
       </p>
-      {m.isLoading ? <Spinner /> : m.isError ? <ErrorState error={m.error} /> : (
+      {m.isLoading ? (
+        <ul aria-busy className="mt-10 min-h-screen divide-y divide-line border-y border-line">
+          {Array.from({ length: 10 }, (_, i) => <li key={i} className="flex items-center gap-4 py-4"><span className="skeleton h-16 w-16 shrink-0 rounded-xl" /><span className="flex-1 space-y-2"><span className="skeleton block h-4 w-1/3" /><span className="skeleton block h-4 w-2/3" /></span></li>)}
+        </ul>
+      ) : m.isError ? <ErrorState error={m.error} /> : (
         <>
           <ul className="mt-10 divide-y divide-line border-y border-line">
             {Object.entries(m.data!.products).flatMap(([slug, p]) => p.images.map((img) => (
@@ -43,7 +47,7 @@ export default function CreditsPage() {
                 <div className="min-w-0 text-sm">
                   <Link to={`/products/${slug}`} className="font-medium hover:underline">{p.title}</Link>
                   <p className="text-muted">
-                    <a className="underline underline-offset-2" href={img.source.page} target="_blank" rel="noopener noreferrer">{img.source.title.replace(/^File:/, '')}</a>
+                    <a className="underline underline-offset-2" href={img.source.page} target="_blank" rel="noopener noreferrer">{img.source.title.replace(/^File:/, '')}</a>{img.source.site && img.source.site !== 'Wikimedia Commons' ? ` (${img.source.site})` : ''}
                     {' by '}{img.source.author || 'unknown author'}{' · '}
                     {img.source.licenseUrl ? <a className="underline underline-offset-2" href={img.source.licenseUrl} target="_blank" rel="noopener license noreferrer">{img.source.license}</a> : img.source.license}
                   </p>

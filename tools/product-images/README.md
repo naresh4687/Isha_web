@@ -3,9 +3,10 @@
 Builds the product photos in `web/public/assets/products/` and their `manifest.json` from
 Wikimedia Commons, using only files licensed for commercial reuse (Public domain, CC0, CC BY, CC BY-SA).
 
-1. `search.py` / `search2.py` — query the Commons API with the per-product terms in
-   `queries.py` / `queries2.py`; keep licence-compatible candidates at least 700 px on the short side
-   (`cands.json`, `cands2.json`, plus thumbnails for review).
+1. `search.py` / `search2.py` — query the Commons API with the per-product terms in `queries.py` /
+   `queries2.py`; `openverse_search.py` searches Openverse (Flickr, WordPress Photo Directory, commercial-use
+   licences only) for the remaining gaps. Each keeps licence-compatible candidates at least 700 px on the
+   short side (`cands.json`, `cands2.json`, `ov_cands.json`, plus thumbnails for review).
 2. `sheet.py` / `sheet2.py` — contact sheets of the candidates, one row per product, for picking by eye.
 3. `picks.py` — the chosen file per product (first = primary). `alts.py` — alt text describing what each
    photo shows, crop overrides, and the products left on illustrations with the reason.

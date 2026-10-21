@@ -9,7 +9,7 @@ import type { ProductCard as P } from '../api/types';
 const base: P = {
   id: '1', slug: 'cork-yoga-block', title: 'Cork Yoga Block', category: { slug: 'yoga-store', name: 'Yoga Store' }, subcategory: 'Props',
   pricePaise: 79000, compareAtPaise: null, discountPct: 0, ratingAvg: 4.2, ratingCount: 41, inStock: true, lowStock: false, isNew: false,
-  image: '/media/products/cork-yoga-block/0.svg', imageAlt: 'Illustration of Cork Yoga Block', tags: [],
+  image: '/media/products/cork-yoga-block/0.svg', imageAlt: 'Illustration of Cork Yoga Block', imageFit: 'cover', tags: [],
 };
 const card = (p: Partial<P>, props = {}) => render(<MemoryRouter><ProductCard product={{ ...base, ...p }} {...props} /></MemoryRouter>);
 

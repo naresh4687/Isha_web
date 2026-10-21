@@ -217,7 +217,7 @@ export default function CheckoutPage() {
           <ul className="mt-4 space-y-3">
             {c.lines.map((l) => (
               <li key={l.variantId} className="flex items-center gap-3 text-sm">
-                <ProductImage src={l.image} alt="" slug={l.slug} sizes="48px" className="aspect-square h-12 w-12 shrink-0 rounded-lg border border-line" />
+                <ProductImage src={l.image} alt="" slug={l.slug} fit={l.imageFit} sizes="48px" className="aspect-square h-12 w-12 shrink-0 rounded-lg border border-line" />
                 <span className="flex-1">{l.title}{l.variantName !== 'Standard' ? ` · ${l.variantName}` : ''} × {l.quantity}</span>
                 <span className="tabular-nums">{inr(l.lineTotalPaise)}</span>
               </li>

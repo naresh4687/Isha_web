@@ -68,7 +68,7 @@ function Hero() {
           const pos = ['col-span-3 row-span-6', 'col-span-2 row-span-3', 'col-span-2 row-span-3'][i];
           return p ? (
             <Link key={p.id} to={`/products/${p.slug}`} className={`${pos} group relative overflow-hidden rounded-3xl border border-line`}>
-              <ProductImage src={p.image} alt={p.imageAlt} slug={p.slug} eager className="h-full" sizes={i === 0 ? '(min-width: 1024px) 30vw, 60vw' : '(min-width: 1024px) 20vw, 40vw'}
+              <ProductImage src={p.image} alt={p.imageAlt} slug={p.slug} fit={p.imageFit} eager className="h-full" sizes={i === 0 ? '(min-width: 1024px) 30vw, 60vw' : '(min-width: 1024px) 20vw, 40vw'}
                 imgClassName="motion-safe:duration-700 motion-safe:group-hover:scale-105" />
               {i === 0 && <span className="absolute bottom-4 left-4 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-medium">{p.title}</span>}
             </Link>
@@ -99,7 +99,7 @@ function CategoryTiles() {
               <Link to={`/collections/${c.slug}`} className="group block text-center">
                 <span className="block overflow-hidden rounded-full border border-line bg-sunken">
                   {imgs[i]?.data?.items[0] ? (
-                    <ProductImage src={imgs[i].data!.items[0].image} alt="" slug={imgs[i].data!.items[0].slug} sizes="120px" imgClassName="motion-safe:duration-500 motion-safe:group-hover:scale-110" />
+                    <ProductImage src={imgs[i].data!.items[0].image} alt="" slug={imgs[i].data!.items[0].slug} fit={imgs[i].data!.items[0].imageFit} sizes="120px" imgClassName="motion-safe:duration-500 motion-safe:group-hover:scale-110" />
                   ) : (
                     <span className="block aspect-square" />
                   )}
@@ -175,7 +175,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 gap-4 bg-sunken/60 p-6">
             {(gifts.data?.items ?? []).slice(0, 4).map((p) => (
               <Link key={p.id} to={`/products/${p.slug}`} className="group overflow-hidden rounded-2xl border border-line">
-                <ProductImage src={p.image} alt={p.title} slug={p.slug} sizes="(min-width: 768px) 20vw, 45vw" imgClassName="motion-safe:group-hover:scale-105" />
+                <ProductImage src={p.image} alt={p.title} slug={p.slug} fit={p.imageFit} sizes="(min-width: 768px) 20vw, 45vw" imgClassName="motion-safe:group-hover:scale-105" />
               </Link>
             ))}
           </div>

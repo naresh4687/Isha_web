@@ -9,6 +9,7 @@ exec(open(os.path.join(HERE, "picks.py")).read())   # P
 exec(open(os.path.join(HERE, "alts.py")).read())    # ALT, GRAVITY, UNRESOLVED
 cands = json.load(open(os.path.join(HERE, "cands.json")))
 cands.update({"2:" + k: v for k, v in json.load(open(os.path.join(HERE, "cands2.json"))).items()})
+cands.update({"ov:" + k: v for k, v in json.load(open(os.path.join(HERE, "ov_cands.json"))).items()})
 out_dir = sys.argv[1]; preview = "--preview" in sys.argv
 os.makedirs(os.path.join(HERE, "cache"), exist_ok=True)
 
@@ -50,6 +51,45 @@ def square(img, g):
     x = round(min(max(fx * w - s / 2, 0), w - s)); y = round(min(max(fy * h - s / 2, 0), h - s))
     return img.crop((x, y, x + s, y + s))
 
+def fit_for(img):
+    """'contain' for isolated product shots (border mostly plain light neutral), else 'cover' (lifestyle/texture)."""
+    px = img.resize((64, 64)).load()
+    border = [px[x, y] for x in range(64) for y in (0, 1, 62, 63)] + [px[x, y] for y in range(64) for x in (0, 1, 62, 63)]
+    plain = sum(1 for r, g, b in border if 0.299 * r + 0.587 * g + 0.114 * b > 185 and max(r, g, b) - min(r, g, b) < 28)
+    return "contain" if plain / len(border) >= 0.7 else "cover"
+
+def commons_source(title):
+    key = hashlib.sha1(title.encode()).hexdigest()[:12]
+    cache = os.path.join(HERE, "cache", key)
+    if not os.path.exists(cache + ".json"):
+        ii = info(title); data = get(ii["thumburl"]); time.sleep(0.5)
+        open(cache + ".bin", "wb").write(data); json.dump(ii, open(cache + ".json", "w"))
+    ii = json.load(open(cache + ".json")); m = ii.get("extmetadata", {})
+    lic = strip(m.get("LicenseShortName", {}).get("value"))
+    assert re.match(r"^(cc0|public domain|cc by(-sa)? [0-9.]+)$", lic, re.I), (title, lic)
+    artist = strip(m.get("Artist", {}).get("value"))
+    author = (strip(m.get("Attribution", {}).get("value"))
+              or (artist if artist and "unknown" not in artist.lower() else "")
+              or next((v for k, v in INSTITUTIONS.items() if k in title), "")
+              or "Wikimedia Commons contributor")
+    return open(cache + ".bin", "rb").read(), {
+        "title": title, "page": ii["descriptionurl"], "original": ii["url"], "sha1": ii["sha1"], "site": "Wikimedia Commons",
+        "author": re.sub(r"\s+", " ", author)[:160], "license": lic, "licenseUrl": strip(m.get("LicenseUrl", {}).get("value")) or None}
+
+OV_LICENCE = {"cc0": "CC0", "pdm": "Public domain", "by": "CC BY", "by-sa": "CC BY-SA"}
+
+def openverse_source(c):
+    """A candidate found through Openverse (licence metadata from the Openverse API); the file comes from its host."""
+    key = "ov-" + c["id"]
+    cache = os.path.join(HERE, "cache", key)
+    if not os.path.exists(cache + ".bin"):
+        open(cache + ".bin", "wb").write(get(c["url"])); time.sleep(0.5)
+    lic = OV_LICENCE[c["license"]] + ("" if c["license"] in ("cc0", "pdm") else f" {c['license_version']}")
+    site = {"flickr": "Flickr", "wordpress": "WordPress Photo Directory", "wikimedia": "Wikimedia Commons"}.get(c["source"], c["source"])
+    return "ov:" + c["id"], open(cache + ".bin", "rb").read(), {
+        "title": c["title"], "page": c["foreign_landing_url"], "original": c["url"], "site": site, "via": "Openverse",
+        "author": c["creator"] or f"{site} contributor", "license": lic, "licenseUrl": c["license_url"]}
+
 products, report = {}, []
 titles = {}
 for line in open(os.path.join(HERE, "../../server/seed/catalog.ts")):
@@ -61,16 +101,12 @@ for line in open(os.path.join(HERE, "../../server/seed/catalog.ts")):
 for slug, picks in P.items():
     imgs = []
     for n, (row, idx) in enumerate(picks):
-        c = cands[row][idx]; title = c["title"]
-        key = hashlib.sha1(title.encode()).hexdigest()[:12]
-        cache = os.path.join(HERE, "cache", key)
-        if not os.path.exists(cache + ".json"):
-            ii = info(title); data = get(ii["thumburl"]); time.sleep(0.5)
-            open(cache + ".bin", "wb").write(data); json.dump(ii, open(cache + ".json", "w"))
-        ii = json.load(open(cache + ".json")); m = ii.get("extmetadata", {})
-        lic = strip(m.get("LicenseShortName", {}).get("value"))
-        assert re.match(r"^(cc0|public domain|cc by(-sa)? [0-9.]+)$", lic, re.I), (title, lic)
-        img = ImageOps.exif_transpose(Image.open(cache + ".bin")).convert("RGB")
+        c = cands[row][idx]
+        if row.startswith("ov:"):
+            title, data, src = openverse_source(c)
+        else:
+            title = c["title"]; data, src = commons_source(title)
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
         sq = pad(img) if title in PAD else square(img, GRAVITY.get(title, (0.5, 0.5)))
         if min(sq.size) < 600: report.append(f"LOW-RES {slug} {title} {sq.size}")
         files = {}
@@ -84,16 +120,9 @@ for slug, picks in P.items():
         else:
             os.makedirs(os.path.join(HERE, "preview"), exist_ok=True)
             sq.resize((200, 200)).save(os.path.join(HERE, "preview", f"{slug}__{n}.jpg"))
-        artist = strip(m.get("Artist", {}).get("value"))
-        author = (strip(m.get("Attribution", {}).get("value"))
-                  or (artist if artist and "unknown" not in artist.lower() else "")
-                  or next((v for k, v in INSTITUTIONS.items() if k in title), "")
-                  or "Wikimedia Commons contributor")
-        imgs.append({"file": rel, "alt": ALT[title], "width": 800, "height": 800, "bytes": {"400": len(files[400]), "800": len(files[800])},
-                     "source": {"title": title, "page": ii["descriptionurl"], "original": ii["url"], "sha1": ii["sha1"],
-                                "author": re.sub(r"\s+", " ", author)[:160], "license": lic,
-                                "licenseUrl": strip(m.get("LicenseUrl", {}).get("value")) or None,
-                                "modifications": ("Padded to square" if title in PAD else "Cropped to square") + " and resized; converted to WebP."}})
+        src["modifications"] = ("Padded to square" if title in PAD else "Cropped to square") + " and resized; converted to WebP."
+        imgs.append({"file": rel, "alt": ALT[title], "width": 800, "height": 800, "fit": fit_for(sq),
+                     "bytes": {"400": len(files[400]), "800": len(files[800])}, "source": src})
     products[slug] = {"title": titles[slug], "images": imgs}
 
 manifest = {

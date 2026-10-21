@@ -21,11 +21,12 @@ describe('product images', () => {
         for (const w of [400, 800]) expect(fs.statSync(path.join(assets, 'assets/products', `${img.file}-${w}.webp`)).size).toBeGreaterThan(1000);
         expect(img.alt.length).toBeGreaterThan(10);
         expect(img.source.license).toMatch(LICENCES);
-        expect(img.source.page).toMatch(/^https:\/\/commons\.wikimedia\.org\/wiki\/File:/);
+        expect(img.source.page).toMatch(/^https:\/\/(commons\.wikimedia\.org\/wiki\/File:|www\.flickr\.com\/photos\/|wordpress\.org\/photos\/)/);
+        expect(['contain', 'cover']).toContain(img.fit);
         expect(img.source.author).not.toMatch(/unknown/i);
       }
     }
-    expect(fs.existsSync(path.join(assets, 'assets/products/fallback.svg'))).toBe(true);
+    expect(fs.existsSync(path.join(assets, 'assets/products/fallback-brand.svg'))).toBe(true);
   });
 
   it('uses one canonical image across detail, listing, search, recommendations and cart', async () => {
@@ -36,6 +37,7 @@ describe('product images', () => {
     expect(canonical).toMatch(/^\/assets\/products\/copper-water-bottle-1-l\/0-[0-9a-f]{10}-800\.webp$/);
     expect(detail.image).toBe(canonical);
     expect(detail.imageAlt).toBe(detail.images[0].alt);
+    expect(detail.imageFit).toBe(detail.images[0].fit);
     expect(detail.images[0].credit).toMatchObject({ license: expect.stringMatching(LICENCES), sourceUrl: expect.stringContaining('commons.wikimedia.org') });
 
     const listed = (await c.get('/api/products?category=yoga-store&pageSize=48')).body.items.find((p: any) => p.slug === slug);

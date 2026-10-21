@@ -59,3 +59,9 @@ P.update({
  "guggul-dhoop-cones": [("2:guggul-dhoop-cones", 1)],
  "breath-and-stillness-journal": [("breath-and-stillness-journal", 9)],
 })
+
+P.update({
+ "panchamukhi-bead-set-for-children": [("ov:panchamukhi-bead-set-for-children", 10)],
+ "handloom-cotton-cushion-cover": [("ov:handloom-cotton-cushion-cover", 9), ("ov:handloom-cotton-cushion-cover", 7)],
+ "braided-jute-rug": [("ov:braided-jute-rug", 1), ("ov:braided-jute-rug", 3)],
+})

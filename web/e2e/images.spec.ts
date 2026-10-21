@@ -110,3 +110,31 @@ test('image credits page lists attributions and admin shows product thumbnails',
   await expect(page.getByText(/Primary · CC BY/)).toBeVisible();
   expect(failed).toEqual([]);
 });
+
+test.describe('tablet layout', () => {
+  test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true });
+
+  test('pages load with no console errors, failed images or layout shift', async ({ page }) => {
+    const failed = watchImages(page);
+    const errors: string[] = [];
+    page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.addInitScript(() => {
+      (window as any).__cls = 0;
+      new PerformanceObserver((l) => { for (const e of l.getEntries() as any[]) if (!e.hadRecentInput) (window as any).__cls += e.value; }).observe({ type: 'layout-shift', buffered: true });
+    });
+    for (const url of ['/', '/collections/clothing', '/products/linen-blend-mandarin-shirt', '/search?q=rudraksha', '/image-credits']) {
+      await page.goto(url);
+      await page.waitForLoadState('networkidle');
+      await expectImagesRendered(page);
+      const cls = await page.evaluate(() => (window as any).__cls as number);
+      expect(cls, `layout shift on ${url}`).toBeLessThan(0.1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `horizontal overflow on ${url}`).toBe(true);
+    }
+    // An isolated product shot is shown whole on a white mat.
+    await page.goto('/products/linen-blend-mandarin-shirt');
+    await expect(page.getByRole('tabpanel').locator('img')).toHaveClass(/object-contain/);
+    expect(errors).toEqual([]);
+    expect(failed).toEqual([]);
+  });
+});

@@ -124,8 +124,8 @@ export default function ListingPage({ mode }: { mode: 'category' | 'search' | 'a
     <div className="page pb-10 pt-8">
       <Breadcrumbs items={[{ label: 'Home', to: '/' }, ...(mode === 'category' ? [{ label: 'Shop', to: '/shop' }, { label: cat?.name ?? '…' }] : [{ label: mode === 'search' ? 'Search' : 'Shop' }])]} />
       <header className="mb-8 mt-4 max-w-3xl">
-        <h1 className="text-4xl sm:text-5xl">{title}</h1>
-        {mode === 'category' && cat && <p className="mt-3 text-muted">{cat.description}</p>}
+        <h1 className="text-4xl sm:text-5xl">{title || <span aria-hidden className="skeleton inline-block h-[1em] w-56 align-middle" />}</h1>
+        {mode === 'category' && (cat ? <p className="mt-3 text-muted">{cat.description}</p> : <p aria-hidden className="skeleton mt-3 h-6 w-2/3" />)}
       </header>
 
       {mode === 'search' && (

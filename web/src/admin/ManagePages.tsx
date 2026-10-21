@@ -79,7 +79,7 @@ export function ProductsAdmin() {
             <tbody>
               {list.data.items.map((p: any) => p.variants.map((v: any, i: number) => (
                 <tr key={v.id} className="border-b border-line/60">
-                  {i === 0 && <td className="p-3 align-top" rowSpan={p.variants.length}><div className="flex items-center gap-3"><ProductImage src={p.image} alt="" slug={p.slug} sizes="40px" className="aspect-square h-10 w-10 shrink-0 rounded-lg border border-line" /><div><Link className="font-medium hover:underline" to={`/admin/products/${p.id}`}>{p.title}</Link>{!p.isActive && <span className="ml-2 text-xs text-danger">hidden</span>}{!p.hasPhoto && <span className="block text-xs text-muted">illustration only</span>}</div></div></td>}
+                  {i === 0 && <td className="p-3 align-top" rowSpan={p.variants.length}><div className="flex items-center gap-3"><ProductImage src={p.image} alt="" slug={p.slug} fit={p.imageFit} sizes="40px" className="aspect-square h-10 w-10 shrink-0 rounded-lg border border-line" /><div><Link className="font-medium hover:underline" to={`/admin/products/${p.id}`}>{p.title}</Link>{!p.isActive && <span className="ml-2 text-xs text-danger">hidden</span>}{!p.hasPhoto && <span className="block text-xs text-muted">illustration only</span>}</div></div></td>}
                   {i === 0 && <td className="p-3 align-top text-muted" rowSpan={p.variants.length}>{p.category}</td>}
                   <td className="p-3">{v.name} <span className="font-mono text-xs text-muted">{v.sku}</span></td>
                   <td className="p-3 tabular-nums">{inr(v.pricePaise)}</td>
@@ -160,7 +160,7 @@ export function ProductEditor() {
             <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
               {q.data.images.map((img: any, n: number) => (
                 <li key={img.src} className="text-xs text-muted">
-                  <ProductImage src={img.src} alt={img.alt} slug={q.data.slug} sizes="120px" className="aspect-square rounded-lg border border-line" />
+                  <ProductImage src={img.src} alt={img.alt} slug={q.data.slug} fit={img.fit} sizes="120px" className="aspect-square rounded-lg border border-line" />
                   <p className="mt-1">{n === 0 ? 'Primary · ' : ''}{img.credit?.license ?? 'own work'}</p>
                 </li>
               ))}

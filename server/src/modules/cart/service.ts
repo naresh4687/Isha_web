@@ -43,6 +43,7 @@ export interface CartLine {
   available: boolean;
   image: string;
   imageAlt: string;
+  imageFit: 'contain' | 'cover';
   gstRateBps: number | null;
 }
 

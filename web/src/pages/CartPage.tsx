@@ -42,7 +42,7 @@ export default function CartPage() {
             {c.lines.map((l) => (
               <li key={l.variantId} className="flex gap-4 py-5 sm:gap-6">
                 <Link to={`/products/${l.slug}`} tabIndex={-1} aria-hidden="true" className="w-24 shrink-0 overflow-hidden rounded-xl border border-line sm:w-28">
-                  <ProductImage src={l.image} alt="" slug={l.slug} sizes="112px" />
+                  <ProductImage src={l.image} alt="" slug={l.slug} fit={l.imageFit} sizes="112px" />
                 </Link>
                 <div className="flex flex-1 flex-col gap-2">
                   <div className="flex justify-between gap-4">

@@ -6,12 +6,12 @@ import HomePage from './pages/HomePage';
 import ListingPage from './pages/ListingPage';
 import ProductPage from './pages/ProductPage';
 import CartPage from './pages/CartPage';
+import CreditsPage from './pages/CreditsPage';
 import { AboutPage, AccountPage, AuthPage, NotFoundPage, SupportPage, WishlistPage } from './pages/AccountPages';
 
 // Checkout and admin (with charts) are split into separate chunks.
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const OrderPage = lazy(() => import('./pages/OrderPage'));
-const CreditsPage = lazy(() => import('./pages/CreditsPage'));
 const AdminLayout = lazy(() => import('./admin/AdminLayout').then((m) => ({ default: m.AdminLayout })));
 const AnalyticsPage = lazy(() => import('./admin/AnalyticsPage'));
 const InsightsPage = lazy(() => import('./admin/InsightsPage'));
@@ -54,7 +54,7 @@ export const routes = [
       { path: '/register', element: <AuthPage mode="register" key="register" /> },
       { path: '/support', element: <SupportPage /> },
       { path: '/about', element: <AboutPage /> },
-      { path: '/image-credits', element: S(<CreditsPage />) },
+      { path: '/image-credits', element: <CreditsPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

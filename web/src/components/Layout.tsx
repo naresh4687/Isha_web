@@ -8,7 +8,7 @@ export const BRAND_FALLBACK = 'Anvaya';
 
 function useBrand() {
   const s = useSettings();
-  return { name: s.data?.brand?.name ?? BRAND_FALLBACK, tagline: s.data?.brand?.tagline as string | undefined, announcement: s.data?.announcement?.text as string | undefined };
+  return { name: s.data?.brand?.name ?? BRAND_FALLBACK, tagline: s.data?.brand?.tagline as string | undefined, announcement: s.data?.announcement?.text as string | undefined, loading: s.isLoading };
 }
 
 function ThemeToggle() {
@@ -266,9 +266,10 @@ export function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-canvas">Skip to content</a>
-      {brand.announcement && (
+      {(brand.announcement || brand.loading) && (
         <div className="bg-ink text-canvas">
-          <p className="page py-2 text-center text-xs tracking-wide">{brand.announcement}</p>
+          {/* Reserves the bar's height while settings load so the page doesn't jump down. */}
+          <p className="page min-h-8 py-2 text-center text-xs tracking-wide">{brand.announcement}</p>
         </div>
       )}
       <Header />

@@ -14,6 +14,7 @@ export interface ProductCard {
   isNew: boolean;
   image: string;
   imageAlt: string;
+  imageFit: 'contain' | 'cover';
   tags: string[];
 }
 
@@ -29,6 +30,7 @@ export interface ProductImage {
   alt: string;
   width: number;
   height: number;
+  fit: 'contain' | 'cover';
   /** Set for licensed photographs; null for the store's own illustrations. */
   credit: ImageCredit | null;
 }
@@ -93,6 +95,7 @@ export interface CartLine {
   available: boolean;
   image: string;
   imageAlt: string;
+  imageFit: 'contain' | 'cover';
 }
 
 export interface Totals {
@@ -130,7 +133,7 @@ export interface Order {
   cancelledAt: string | null;
   items?: {
     id: string; productId: string; slug: string; title: string; variantName: string; unitPricePaise: number; quantity: number;
-    lineTotalPaise: number; image: string; imageAlt: string; refundedQuantity: number; refundedPaise: number; returnable: boolean;
+    lineTotalPaise: number; image: string; imageAlt: string; imageFit: 'contain' | 'cover'; refundedQuantity: number; refundedPaise: number; returnable: boolean;
   }[];
   returns?: { id: string; items: { orderItemId: string; quantity: number }[]; reason: string; status: 'requested' | 'refunded' | 'rejected'; adminNote: string | null; createdAt: string }[];
   returnWindowOpen?: boolean;

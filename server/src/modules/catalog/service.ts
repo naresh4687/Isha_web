@@ -18,6 +18,7 @@ export interface ProductCard {
   isNew: boolean;
   image: string;
   imageAlt: string;
+  imageFit: 'contain' | 'cover';
   tags: string[];
 }
 

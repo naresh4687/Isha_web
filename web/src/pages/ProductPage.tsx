@@ -22,18 +22,18 @@ function Gallery({ images, slug }: { images: ProductImageT[]; slug: string }) {
             {images.map((img, n) => (
               <button key={img.src} role="tab" aria-selected={i === n} aria-label={`Show image ${n + 1} of ${images.length}: ${img.alt}`} onClick={() => setI(n)}
                 className={`w-16 overflow-hidden rounded-xl border sm:w-20 ${i === n ? 'border-ink' : 'border-line opacity-70 hover:opacity-100'}`}>
-                <ProductImage src={img.src} alt="" slug={slug} sizes="80px" />
+                <ProductImage src={img.src} alt="" slug={slug} fit={img.fit} sizes="80px" />
               </button>
             ))}
           </div>
         )}
         <div className="flex-1 overflow-hidden rounded-3xl border border-line" role="tabpanel">
-          <ProductImage src={cur.src} alt={cur.alt} slug={slug} eager width={cur.width} height={cur.height} sizes="(min-width: 1024px) 45vw, 100vw" />
+          <ProductImage src={cur.src} alt={cur.alt} slug={slug} fit={cur.fit} eager width={cur.width} height={cur.height} sizes="(min-width: 1024px) 45vw, 100vw" />
         </div>
       </div>
       <p className="mt-2 text-xs text-muted">
         {cur.credit ? (
-          <>Representative photo: <a className="underline underline-offset-2" href={cur.credit.sourceUrl} target="_blank" rel="noopener noreferrer">{cur.credit.author || 'Wikimedia Commons'}</a>
+          <>Representative photo: <a className="underline underline-offset-2" href={cur.credit.sourceUrl} target="_blank" rel="noopener noreferrer">{cur.credit.author || 'Source'}</a>
             {' · '}{cur.credit.licenseUrl ? <a className="underline underline-offset-2" href={cur.credit.licenseUrl} target="_blank" rel="noopener license noreferrer">{cur.credit.license}</a> : cur.credit.license}
             {' · cropped and resized. '}<Link className="underline underline-offset-2" to="/image-credits">All image credits</Link></>
         ) : 'Illustration — demo product, no photograph available.'}
@@ -171,9 +171,13 @@ export default function ProductPage() {
 
   if (q.isLoading)
     return (
-      <div className="page grid gap-10 pt-10 lg:grid-cols-2" aria-busy>
-        <div className="skeleton aspect-square rounded-3xl" />
-        <div className="space-y-4"><div className="skeleton h-10 w-3/4" /><div className="skeleton h-6 w-32" /><div className="skeleton h-24 w-full" /></div>
+      // Mirrors the loaded layout (breadcrumbs, grid, square gallery) so content doesn't jump when it arrives.
+      <div className="page pt-8" aria-busy>
+        <div className="skeleton h-5 w-64" />
+        <div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+          <div className="skeleton aspect-square rounded-3xl" />
+          <div className="space-y-4 lg:pt-4"><div className="skeleton h-4 w-40" /><div className="skeleton h-12 w-3/4" /><div className="skeleton h-6 w-32" /><div className="skeleton h-24 w-full" /></div>
+        </div>
       </div>
     );
   if (q.isError || !p)

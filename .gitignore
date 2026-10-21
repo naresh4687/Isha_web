@@ -10,3 +10,8 @@ ml/artifacts/*
 web/test-results/
 web/playwright-report/
 *.tsbuildinfo
+
+# product image pipeline working files
+tools/product-images/cache/
+tools/product-images/preview/
+tools/product-images/thumbs*/

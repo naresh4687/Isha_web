@@ -47,4 +47,12 @@ describe('ProductImage', () => {
     expect(container.querySelector('[aria-hidden]')).toBeNull();
     expect(container.querySelector('img')!.className).toContain('opacity-100');
   });
+
+  it('keeps isolated product shots whole with contain, but not once it has fallen back', () => {
+    const { container } = render(<ProductImage src={photo} alt="" slug="cork-yoga-block" fit="contain" />);
+    expect(container.querySelector('img')!.className).toContain('object-contain');
+    expect(container.firstElementChild!.className).toContain('bg-white');
+    fireEvent.error(container.querySelector('img')!);
+    expect(container.querySelector('img')!.className).toContain('object-cover');
+  });
 });

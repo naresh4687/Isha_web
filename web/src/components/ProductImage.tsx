@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /** Local placeholder shown when both the photo and the generated illustration fail. Never fails itself. */
-export const FALLBACK_IMAGE = '/assets/products/fallback.svg';
+export const FALLBACK_IMAGE = '/assets/products/fallback-brand.svg';
 
 /** Local product photos are generated at 400 and 800 px wide (`…-400.webp`, `…-800.webp`). */
 export function srcSetFor(src: string) {
@@ -32,13 +32,15 @@ interface Props {
   className?: string;
   /** Extra classes for the <img> (e.g. hover zoom). */
   imgClassName?: string;
+  /** 'contain' keeps an isolated product shot whole on a white mat; 'cover' fills the frame. */
+  fit?: 'contain' | 'cover';
 }
 
 /**
  * Product photo in a fixed-ratio frame: placeholder while loading, object-cover without stretching,
  * and a bounded fallback chain so a missing file never shows a broken-image icon or loops.
  */
-export function ProductImage({ src, alt, slug, sizes = '(min-width: 1024px) 25vw, 50vw', eager, width = 800, height = 800, className = 'aspect-square', imgClassName = '' }: Props) {
+export function ProductImage({ src, alt, slug, sizes = '(min-width: 1024px) 25vw, 50vw', eager, width = 800, height = 800, className = 'aspect-square', imgClassName = '', fit = 'cover' }: Props) {
   const chain = fallbackChain(src, slug);
   const [step, setStep] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -49,13 +51,14 @@ export function ProductImage({ src, alt, slug, sizes = '(min-width: 1024px) 25vw
   useEffect(() => { if (ref.current?.complete && ref.current.naturalWidth) setLoaded(true); }, [step, src]);
 
   const current = chain[Math.min(step, chain.length - 1)];
+  const contain = fit === 'contain' && step === 0; // fallbacks are illustrations, which fill the frame
   const onError = () => {
     if (step < chain.length - 1) { setLoaded(false); setStep(step + 1); }
     else setLoaded(true); // last resort failed too: stop, keep the neutral frame
   };
 
   return (
-    <span className={`relative block overflow-hidden bg-sunken ${className}`}>
+    <span className={`relative block overflow-hidden ${contain ? 'bg-white' : 'bg-sunken'} ${className}`}>
       {!loaded && <span aria-hidden className="absolute inset-0 bg-sunken motion-safe:animate-pulse" />}
       <img
         ref={ref}
@@ -73,7 +76,7 @@ export function ProductImage({ src, alt, slug, sizes = '(min-width: 1024px) 25vw
         onLoad={() => setLoaded(true)}
         onError={onError}
         data-fallback={step > 0 ? step : undefined}
-        className={`h-full w-full object-cover transition duration-300 ${loaded ? 'opacity-100' : 'opacity-0'} ${imgClassName}`}
+        className={`h-full w-full ${contain ? 'object-contain' : 'object-cover'} transition duration-300 ${loaded ? 'opacity-100' : 'opacity-0'} ${imgClassName}`}
       />
     </span>
   );

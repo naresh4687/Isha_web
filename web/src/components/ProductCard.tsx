@@ -25,6 +25,7 @@ export function ProductCard({ product: p, onWishlist, wishlisted, placement, pos
           src={p.image}
           alt=""
           slug={p.slug}
+          fit={p.imageFit}
           sizes="(min-width: 1024px) 22vw, (min-width: 768px) 30vw, 46vw"
           imgClassName={`motion-safe:duration-500 motion-safe:group-hover:scale-[1.03] ${p.inStock ? '' : 'grayscale-[30%] !opacity-60'}`}
         />

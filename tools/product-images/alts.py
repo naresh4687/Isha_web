@@ -112,3 +112,14 @@ UNRESOLVED = {
  "the-little-yoga-picture-book": "Original fictional title; a photo of another book would misrepresent it.",
  "grandmothers-pantry": "Original fictional title; a photo of another book would misrepresent it.",
 }
+
+ALT.update({
+ "ov:8af4a602-71ab-4c4b-aa61-3968d0a10ab9": "A wicker basket full of brown rudraksha beads",
+ "ov:99ca2ae6-c38e-4b66-a91a-b767d75bb558": "A handloom ikat cushion cover in orange and blue",
+ "ov:5b8c0cb1-55d5-488e-9e64-916484ad33a3": "A round cushion cover with colourful radiating embroidery",
+ "ov:734ce833-7861-4e96-ac61-4035ddb399a1": "Close-up of a woven natural-fibre rug",
+ "ov:1776ac8b-0eba-408a-9c59-574d6688a54d": "Close-up of a braided natural-fibre rug texture",
+})
+for _s in ("panchamukhi-bead-set-for-children", "handloom-cotton-cushion-cover", "braided-jute-rug"):
+    UNRESOLVED.pop(_s, None)
+UNRESOLVED["carved-wooden-incense-holder"] = "Only metal or plastic incense holders found; none in carved wood."

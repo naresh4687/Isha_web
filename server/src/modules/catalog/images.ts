@@ -15,6 +15,8 @@ export interface ProductImage {
   alt: string;
   width: number;
   height: number;
+  /** 'contain' for isolated product shots on a plain background, 'cover' for lifestyle/texture photos. */
+  fit: 'contain' | 'cover';
   credit: ImageCredit | null;
 }
 
@@ -31,6 +33,7 @@ export function productImages(slug: string, title: string, stored: ProductImage[
     alt: n === 0 ? `Illustration of ${title}` : `Illustration of ${title}, alternate view ${n}`,
     width: 600,
     height: 600,
+    fit: 'cover' as const,
     credit: null,
   }));
 }
@@ -38,7 +41,7 @@ export function productImages(slug: string, title: string, stored: ProductImage[
 /** The one canonical image (and its alt text) every surface shows for a product. */
 export function primaryImage(slug: string, title: string, stored: ProductImage[] | null | undefined) {
   const img = productImages(slug, title, stored)[0];
-  return { image: img.src, imageAlt: img.alt };
+  return { image: img.src, imageAlt: img.alt, imageFit: img.fit ?? 'cover' };
 }
 
 // ---- Asset manifest -> database ------------------------------------------------------------
@@ -46,7 +49,7 @@ export function primaryImage(slug: string, title: string, stored: ProductImage[]
 const MANIFEST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../web/public/assets/products/manifest.json');
 
 interface ManifestEntry {
-  images: { file: string; alt: string; width: number; height: number; source: { author: string; license: string; licenseUrl: string | null; page: string } }[];
+  images: { file: string; alt: string; width: number; height: number; fit?: 'contain' | 'cover'; source: { author: string; license: string; licenseUrl: string | null; page: string } }[];
 }
 
 export function readManifest(file = MANIFEST): Record<string, ManifestEntry> {
@@ -60,6 +63,7 @@ export function manifestImages(entry: ManifestEntry): ProductImage[] {
     alt: i.alt,
     width: i.width,
     height: i.height,
+    fit: i.fit ?? 'cover',
     credit: { author: i.source.author, license: i.source.license, licenseUrl: i.source.licenseUrl, sourceUrl: i.source.page },
   }));
 }
