@@ -3,7 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { one, pool } from '../src/db/pool.js';
-import { applyImageManifest, readManifest } from '../src/modules/catalog/images.js';
+import os from 'node:os';
+import { ASSET_DIR, applyImageManifest, planImageSync, readManifest, validateManifest, webpSize } from '../src/modules/catalog/images.js';
 import { client } from './helpers.js';
 
 const assets = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/public');
@@ -78,5 +79,35 @@ describe('product images', () => {
     await pool.query(`UPDATE products SET images = '[]' WHERE slug = $1`, [slug]);
     expect(await applyImageManifest()).toBe(1);
     expect((await one('SELECT images->0->>$2 AS src FROM products WHERE slug = $1', [slug, 'src']))!.src).toMatch(/^\/assets\/products\//);
+  });
+
+  it('validates the manifest and plans a dry run with nothing left to change after seeding', async () => {
+    expect(validateManifest(manifest).errors).toEqual([]);
+    const plan = await planImageSync();
+    expect(plan.filter((p) => p.action === 'update')).toEqual([]);
+    expect(plan.filter((p) => p.action === 'not-in-catalogue')).toEqual([]);
+    for (const p of plan.filter((x) => x.action === 'unchanged')) expect(p.attribution).toMatch(/·/);
+    expect(plan.some((p) => p.action === 'illustration')).toBe(true);
+  });
+
+  it('rejects disallowed hosts, bad licences, corrupt files and duplicates, and then applies nothing', async () => {
+    const [slug, entry] = Object.entries(manifest)[0];
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'img-'));
+    fs.cpSync(path.join(ASSET_DIR, slug), path.join(tmp, slug), { recursive: true });
+    const img = entry.images[0];
+    expect(webpSize(fs.readFileSync(path.join(tmp, `${img.file}-800.webp`)))).toEqual({ width: 800, height: 800 });
+
+    const bad = (patch: (e: any) => void) => { const e = structuredClone(entry); patch(e); return { [slug]: e }; };
+    expect(validateManifest(bad((e) => { e.images[0].source.page = 'https://ishalife.sadhguru.org/x.jpg'; }), tmp).errors.join()).toMatch(/not allow-listed/);
+    expect(validateManifest(bad((e) => { e.images[0].source.license = 'All rights reserved'; }), tmp).errors.join()).toMatch(/not permitted/);
+    expect(validateManifest(bad((e) => { e.images.push(structuredClone(e.images[0])); }), tmp).errors.join()).toMatch(/duplicate/);
+    fs.writeFileSync(path.join(tmp, `${img.file}-400.webp`), Buffer.from('\xff\xd8\xff\xe0 not a webp', 'latin1'));
+    expect(validateManifest({ [slug]: entry }, tmp).errors.join()).toMatch(/not a valid WebP/);
+
+    const before = (await one('SELECT images FROM products WHERE slug = $1', [slug]))!.images;
+    const evil = bad((e) => { e.images[0].file = `${slug}/0-0000000000`; });
+    expect(await applyImageManifest(pool, evil, tmp)).toBe(0);
+    expect((await one('SELECT images FROM products WHERE slug = $1', [slug]))!.images).toEqual(before);
+    fs.rmSync(tmp, { recursive: true, force: true });
   });
 });

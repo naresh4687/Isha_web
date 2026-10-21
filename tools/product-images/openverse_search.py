@@ -17,7 +17,11 @@ Q = {
 }
 OK = {"cc0", "pdm", "by", "by-sa"}
 
+ALLOWED_HOSTS = {"commons.wikimedia.org", "upload.wikimedia.org", "api.openverse.org", "live.staticflickr.com", "pd.w.org"}
+
 def get(url, tries=4):
+    if urllib.parse.urlparse(url).netloc not in ALLOWED_HOSTS and not urllib.parse.urlparse(url).netloc.endswith(".staticflickr.com"):
+        raise SystemExit(f"refusing to fetch from non-allow-listed host: {url}")
     for i in range(tries):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=40) as r: return r.read()

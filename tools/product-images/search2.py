@@ -1,7 +1,11 @@
 import json, re, sys, time, urllib.parse, urllib.request, os, html
 UA = "AnvayaDemoStore/1.0 (image sourcing for a demo shop; https://github.com/naresh4687/Isha_web)"
 OK = re.compile(r"^(cc0|public domain|pd|cc by(-sa)? [0-9.]+( [a-z]+)?|cc by(-sa)?)$", re.I)
+ALLOWED_HOSTS = {"commons.wikimedia.org", "upload.wikimedia.org", "api.openverse.org", "live.staticflickr.com", "pd.w.org"}
+
 def get(url):
+    if urllib.parse.urlparse(url).netloc not in ALLOWED_HOSTS and not urllib.parse.urlparse(url).netloc.endswith(".staticflickr.com"):
+        raise SystemExit(f"refusing to fetch from non-allow-listed host: {url}")
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     for i in range(4):
         try:

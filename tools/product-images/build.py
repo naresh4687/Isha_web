@@ -13,7 +13,15 @@ cands.update({"ov:" + k: v for k, v in json.load(open(os.path.join(HERE, "ov_can
 out_dir = sys.argv[1]; preview = "--preview" in sys.argv
 os.makedirs(os.path.join(HERE, "cache"), exist_ok=True)
 
+# Network access is limited to these hosts (Commons API/files, Openverse API, Flickr and WordPress photo files).
+ALLOWED_HOSTS = {"commons.wikimedia.org", "upload.wikimedia.org", "api.openverse.org", "live.staticflickr.com",
+                 "farm1.staticflickr.com", "farm2.staticflickr.com", "farm4.staticflickr.com", "farm5.staticflickr.com",
+                 "farm6.staticflickr.com", "farm8.staticflickr.com", "farm9.staticflickr.com", "pd.w.org"}
+
 def get(url):
+    host = urllib.parse.urlparse(url).netloc
+    if host not in ALLOWED_HOSTS:
+        raise SystemExit(f"refusing to fetch from non-allow-listed host {host!r}: {url}")
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     for i in range(5):
         try:
@@ -51,6 +59,8 @@ def square(img, g):
     x = round(min(max(fx * w - s / 2, 0), w - s)); y = round(min(max(fy * h - s / 2, 0), h - s))
     return img.crop((x, y, x + s, y + s))
 
+CACHED = [""]
+
 def fit_for(img):
     """'contain' for isolated product shots (border mostly plain light neutral), else 'cover' (lifestyle/texture)."""
     px = img.resize((64, 64)).load()
@@ -72,6 +82,7 @@ def commons_source(title):
               or (artist if artist and "unknown" not in artist.lower() else "")
               or next((v for k, v in INSTITUTIONS.items() if k in title), "")
               or "Wikimedia Commons contributor")
+    CACHED[:] = [cache + ".bin"]
     return open(cache + ".bin", "rb").read(), {
         "title": title, "page": ii["descriptionurl"], "original": ii["url"], "sha1": ii["sha1"], "site": "Wikimedia Commons",
         "author": re.sub(r"\s+", " ", author)[:160], "license": lic, "licenseUrl": strip(m.get("LicenseUrl", {}).get("value")) or None}
@@ -86,11 +97,12 @@ def openverse_source(c):
         open(cache + ".bin", "wb").write(get(c["url"])); time.sleep(0.5)
     lic = OV_LICENCE[c["license"]] + ("" if c["license"] in ("cc0", "pdm") else f" {c['license_version']}")
     site = {"flickr": "Flickr", "wordpress": "WordPress Photo Directory", "wikimedia": "Wikimedia Commons"}.get(c["source"], c["source"])
+    CACHED[:] = [cache + ".bin"]
     return "ov:" + c["id"], open(cache + ".bin", "rb").read(), {
         "title": c["title"], "page": c["foreign_landing_url"], "original": c["url"], "site": site, "via": "Openverse",
         "author": c["creator"] or f"{site} contributor", "license": lic, "licenseUrl": c["license_url"]}
 
-products, report = {}, []
+products, report, SEEN = {}, [], {}
 titles = {}
 for line in open(os.path.join(HERE, "../../server/seed/catalog.ts")):
     m = re.search(r"title: '((?:[^'\\]|\\.)*)'", line)
@@ -113,13 +125,18 @@ for slug, picks in P.items():
         for w in (400, 800):
             buf = io.BytesIO(); sq.resize((w, w), Image.LANCZOS).save(buf, "WEBP", quality=80, method=6); files[w] = buf.getvalue()
         h = hashlib.sha256(files[800]).hexdigest()[:10]
+        if h in SEEN: raise SystemExit(f"duplicate image: {slug} #{n} is identical to {SEEN[h]}")
+        SEEN[h] = f"{slug} #{n}"
         rel = f"{slug}/{n}-{h}"
         if not preview:
             os.makedirs(os.path.join(out_dir, slug), exist_ok=True)
-            for w, b in files.items(): open(os.path.join(out_dir, f"{rel}-{w}.webp"), "wb").write(b)
+            for w, b in files.items():  # write-then-rename so an interrupted run never leaves a partial file
+                dest = os.path.join(out_dir, f"{rel}-{w}.webp"); tmp = dest + ".part"
+                open(tmp, "wb").write(b); os.replace(tmp, dest)
         else:
             os.makedirs(os.path.join(HERE, "preview"), exist_ok=True)
             sq.resize((200, 200)).save(os.path.join(HERE, "preview", f"{slug}__{n}.jpg"))
+        src["retrieved"] = time.strftime("%Y-%m-%d", time.gmtime(os.path.getmtime(CACHED[0])))
         src["modifications"] = ("Padded to square" if title in PAD else "Cropped to square") + " and resized; converted to WebP."
         imgs.append({"file": rel, "alt": ALT[title], "width": 800, "height": 800, "fit": fit_for(sq),
                      "bytes": {"400": len(files[400]), "800": len(files[800])}, "source": src})
@@ -138,6 +155,7 @@ manifest = {
 assert not set(products) & set(UNRESOLVED), set(products) & set(UNRESOLVED)
 assert set(products) | set(UNRESOLVED) == set(titles), set(titles) - set(products) - set(UNRESOLVED)
 if not preview:
-    json.dump(manifest, open(os.path.join(out_dir, "manifest.json"), "w"), indent=1, ensure_ascii=False)
+    tmp = os.path.join(out_dir, "manifest.json.part")
+    json.dump(manifest, open(tmp, "w"), indent=1, ensure_ascii=False); os.replace(tmp, os.path.join(out_dir, "manifest.json"))
 print(f"{len(products)} products, {sum(len(p['images']) for p in products.values())} images, {len(UNRESOLVED)} unresolved")
 print("\n".join(report))

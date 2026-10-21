@@ -1,24 +1,48 @@
-# CI/CD. Every push and PR: typecheck, unit tests, build and end-to-end tests.
-# Pushes to main (or a manual run) that pass everything are then deployed to Render and smoke-tested.
-# Versions match render.yaml (Node 20, Python 3.12). Postgres runs as a throwaway service container.
-# Deploy setup (repo Settings -> Secrets and variables -> Actions): secrets RENDER_DEPLOY_HOOK_STORE and
-# RENDER_DEPLOY_HOOK_ML (each service's Settings -> Deploy Hook); optional variables STORE_URL, ML_URL.
+# CI/CD for Anvaya (Render + Neon). See docs/PRODUCTION.md.
+#  - Every push and pull request: dependency audit, type checks, unit/integration tests, image-manifest
+#    validation, client build, ML tests and Playwright end-to-end tests. PRs never deploy.
+#  - Push to main (or a manual run) that passes everything: deploy that exact commit to Render, wait until it
+#    is live, smoke-test production, and roll back to the previously live commit if the smoke test fails.
+# Versions match render.yaml (Node 20, Python 3.12). Actions are pinned to commit SHAs (tag in the comment).
 name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Commit on main to deploy (blank = latest). Use an older commit to roll back.'
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded PR runs are cancelled; runs on main are never cancelled mid-deploy.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 20
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+      - name: npm audit (runtime dependencies, high and critical)
+        run: |
+          (cd server && npm audit --omit=dev --audit-level=high)
+          (cd web && npm audit --omit=dev --audit-level=high)
+      - name: pip-audit (ML service)
+        run: pip install pip-audit==2.10.1 && pip-audit -r ml/requirements.txt
+
   server:
     runs-on: ubuntu-latest
     services:
@@ -35,8 +59,8 @@ jobs:
       run:
         working-directory: server
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 20
           cache: npm
@@ -44,6 +68,18 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - name: Validate product image manifest and mappings (dry run)
+        run: npm run images:sync -- --report=image-inventory.md
+        env:
+          DATABASE_URL: postgres://anvaya:anvaya_dev_password@localhost:5433/anvaya_test
+          JWT_SECRET: ci-only-secret-ci-only-secret-0123456789
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: image-inventory
+          path: server/image-inventory.md
+          if-no-files-found: ignore
+          retention-days: 14
 
   web:
     runs-on: ubuntu-latest
@@ -51,8 +87,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 20
           cache: npm
@@ -61,6 +97,11 @@ jobs:
       - run: npm test
       - name: Typecheck and production build
         run: npm run build
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: web-dist
+          path: web/dist/
+          retention-days: 7
 
   ml:
     runs-on: ubuntu-latest
@@ -68,14 +109,15 @@ jobs:
       run:
         working-directory: ml
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: ml/requirements.txt
       - run: pip install -r requirements.txt
-      - run: python -m pytest -q
+      - name: Ranking, cold-start, evaluation and API tests
+        run: python -m pytest -q
 
   e2e:
     runs-on: ubuntu-latest
@@ -94,8 +136,8 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U anvaya" --health-interval 3s --health-retries 20
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 20
           cache: npm
@@ -108,99 +150,121 @@ jobs:
         working-directory: web
       - run: npx playwright install --with-deps chromium
         working-directory: web
-      - run: npm run test:e2e
+      - name: Shopping journeys, images, accessibility and responsive layout
+        run: npx playwright test --reporter=list,html
         working-directory: web
-      - name: Upload traces of failed tests
-        if: failure()
-        uses: actions/upload-artifact@v6
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
         with:
-          name: playwright-traces
-          path: web/test-results/
+          name: playwright-report
+          path: |
+            web/playwright-report/
+            web/test-results/
+          if-no-files-found: ignore
           retention-days: 7
 
   deploy:
-    # The storefront service builds the React client and the API together, so one deploy updates both.
+    # The storefront service builds the React client and the API together, so one deploy updates both;
+    # the ML service is deployed only when ml/ changed since the commit it runs.
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    needs: [server, web, ml, e2e]
+    needs: [audit, server, web, ml, e2e]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
     environment:
       name: production
       url: ${{ vars.STORE_URL || 'https://anvaya-1.onrender.com' }}
     env:
-      SHA: ${{ github.sha }}
+      SHA: ${{ inputs.ref || github.sha }}
       STORE_URL: ${{ vars.STORE_URL || 'https://anvaya-1.onrender.com' }}
       ML_URL: ${{ vars.ML_URL || 'https://anvaya-ml.onrender.com' }}
       STORE_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STORE }}
       ML_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_ML }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          fetch-depth: 0 # to diff ml/ against the commit the ML service is running
+          fetch-depth: 0 # to resolve the target commit and diff ml/ against what is live
 
-      - name: Check deploy hooks are configured
+      - name: Check deployment is configured
+        id: gate
         run: |
-          missing=""
-          [ -n "$STORE_HOOK" ] || missing="$missing RENDER_DEPLOY_HOOK_STORE"
-          [ -n "$ML_HOOK" ] || missing="$missing RENDER_DEPLOY_HOOK_ML"
-          if [ -n "$missing" ]; then
-            echo "::error::Missing repository secrets:$missing. Copy each Render service's Settings -> Deploy Hook URL into Settings -> Secrets and variables -> Actions."
-            exit 1
-          fi
+          if [ -n "$STORE_HOOK" ] && [ -n "$ML_HOOK" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+          msg="Production deploy skipped: add secrets RENDER_DEPLOY_HOOK_STORE and RENDER_DEPLOY_HOOK_ML (Render service -> Settings -> Deploy Hook) to the 'production' environment. Tests passed; production was NOT updated."
+          echo "::warning::$msg"; echo "### ⚠️ $msg" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Decide whether the ML service needs a deploy
-        id: ml
+      - name: Resolve target and currently live commits
+        if: steps.gate.outputs.ready == 'true'
+        id: target
         run: |
-          live=$(curl -s --max-time 90 "$ML_URL/health" | python3 -c "import json,sys; print(json.load(sys.stdin).get('commit') or '')" 2>/dev/null || true)
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$live" ] || ! git cat-file -e "$live^{commit}" 2>/dev/null; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"; echo "ML: deploying (live commit '${live:-unknown}')"
-          elif git diff --quiet "$live" "$SHA" -- ml/ render.yaml; then
-            echo "deploy=false" >> "$GITHUB_OUTPUT"; echo "ML: no changes under ml/ since live commit $live, skipping"
-          else
-            echo "deploy=true" >> "$GITHUB_OUTPUT"; echo "ML: ml/ changed since live commit $live, deploying"
-          fi
+          SHA=$(git rev-parse --verify "$SHA^{commit}")
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "::error::$SHA is not on main"; exit 1; }
+          health() { curl -s --max-time 90 "$1" | python3 -c "import json,sys; print(json.load(sys.stdin).get('commit') or '')" 2>/dev/null || true; }
+          store_live=$(health "$STORE_URL/api/health"); ml_live=$(health "$ML_URL/health")
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "store_prev=$store_live" >> "$GITHUB_OUTPUT"; echo "ml_prev=$ml_live" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$ml_live" ] || ! git cat-file -e "$ml_live^{commit}" 2>/dev/null \
+             || ! git diff --quiet "$ml_live" "$SHA" -- ml/ render.yaml; then ml=true; else ml=false; fi
+          echo "ml=$ml" >> "$GITHUB_OUTPUT"
+          echo "target $SHA | storefront live: ${store_live:-unknown} | ML live: ${ml_live:-unknown} | deploy ML: $ml" | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Trigger Render deploys of this exact commit
+      - name: Trigger Render deploys
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
         run: |
-          trigger() { # name, hook URL
-            code=$(curl -s -o resp.json -w '%{http_code}' -X POST "$2&ref=$SHA")
-            echo "$1: HTTP $code"; cat resp.json; echo
+          trigger() { # name, hook, commit (the hook URL is a secret and is never echoed)
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$2&ref=$3")
+            echo "$1: deploy of $3 requested (HTTP $code)"
             case "$code" in
               2??) ;;
               409) echo "::error::$1 is suspended on Render. Resume it in the Render dashboard, then re-run this job."; exit 1 ;;
               *) echo "::error::$1 deploy hook failed (HTTP $code)"; exit 1 ;;
             esac
           }
-          trigger storefront "$STORE_HOOK"
-          if [ "${{ steps.ml.outputs.deploy }}" = "true" ]; then trigger ml-service "$ML_HOOK"; fi
+          trigger storefront "$STORE_HOOK" "$SHA"
+          if [ "${{ steps.target.outputs.ml }}" = "true" ]; then trigger ml-service "$ML_HOOK" "$SHA"; fi
 
-      - name: Wait until the new build is live
+      - name: Wait for the new build and smoke-test production
+        if: steps.gate.outputs.ready == 'true'
+        id: verify
+        env:
+          SHA: ${{ steps.target.outputs.sha }}
         run: |
+          health() { curl -s --max-time 60 "$1" | python3 -c "import json,sys; print(json.load(sys.stdin).get('commit') or '')" 2>/dev/null || true; }
           wait_for() { # name, health URL
             for i in $(seq 1 75); do
-              live=$(curl -s --max-time 60 "$2" | python3 -c "import json,sys; print(json.load(sys.stdin).get('commit') or '')" 2>/dev/null || true)
-              [ "$live" = "$SHA" ] && { echo "$1 is live at $SHA"; return 0; }
+              live=$(health "$2"); [ "$live" = "$SHA" ] && { echo "$1 is live at $SHA"; return 0; }
               echo "$1: waiting (live: ${live:-none})"; sleep 20
             done
-            echo "::error::$1 did not go live with $SHA within 25 minutes; check its deploy logs on Render."; return 1
+            echo "::error::$1 did not go live with $SHA within 25 minutes; see its deploy logs on Render."; return 1
+          }
+          check() { # description, URL, expected content-type prefix
+            read -r code type < <(curl -s -o /dev/null -w '%{http_code} %{content_type}' --max-time 60 "$2")
+            if [ "$code" = "200" ] && [[ "$type" == $3* ]]; then echo "ok   $1"; else echo "::error::smoke test: $1 -> HTTP $code ($type)"; fail=1; fi
           }
           wait_for storefront "$STORE_URL/api/health"
-          if [ "${{ steps.ml.outputs.deploy }}" = "true" ]; then wait_for ml-service "$ML_URL/health"; fi
-
-      - name: Smoke-test production
-        run: |
-          check() { # description, URL, expected content-type prefix
-            read -r code type < <(curl -s -o /tmp/body -w '%{http_code} %{content_type}' --max-time 60 "$2")
-            if [ "$code" = "200" ] && [[ "$type" == $3* ]]; then echo "ok   $1"; else echo "::error::$1 -> HTTP $code ($type)"; fail=1; fi
-          }
+          if [ "${{ steps.target.outputs.ml }}" = "true" ]; then wait_for ml-service "$ML_URL/health"; fi
           fail=0
-          check "storefront page"   "$STORE_URL/"                                   "text/html"
-          check "client route"      "$STORE_URL/products/copper-water-bottle-1-l"   "text/html"
-          check "catalogue API"     "$STORE_URL/api/products?pageSize=1"            "application/json"
-          img=$(curl -s --max-time 60 "$STORE_URL/api/products/copper-water-bottle-1-l" | python3 -c "import json,sys; print(json.load(sys.stdin)['product']['image'])")
-          echo "canonical image: $img"
-          check "product photo"     "$STORE_URL$img"                                "image/"
-          check "image manifest"    "$STORE_URL/assets/products/manifest.json"      "application/json"
-          check "recommendations"   "$STORE_URL/api/recommendations/trending?k=4"   "application/json"
-          check "ML service health" "$ML_URL/health"                                "application/json"
+          check "storefront page"   "$STORE_URL/"                                 "text/html"
+          check "client route"      "$STORE_URL/products/copper-water-bottle-1-l" "text/html"
+          check "catalogue API"     "$STORE_URL/api/products?pageSize=1"          "application/json"
+          img=$(curl -s --max-time 60 "$STORE_URL/api/products/copper-water-bottle-1-l" | python3 -c "import json,sys; print(json.load(sys.stdin)['product']['image'])" 2>/dev/null)
+          check "product photo"     "$STORE_URL${img:-/missing}"                  "image/"
+          check "image manifest"    "$STORE_URL/assets/products/manifest.json"    "application/json"
+          check "recommendations"   "$STORE_URL/api/recommendations/trending?k=4" "application/json"
+          check "ML service health" "$ML_URL/health"                              "application/json"
+          [ $fail = 0 ] && echo "✅ $SHA is live and passed smoke tests" >> "$GITHUB_STEP_SUMMARY"
           exit $fail
+
+      - name: Roll back to the previously live commit
+        if: failure() && steps.verify.conclusion == 'failure' && steps.target.outputs.store_prev != ''
+        run: |
+          trigger() { code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$2&ref=$3"); echo "$1: rollback to $3 requested (HTTP $code)"; }
+          trigger storefront "$STORE_HOOK" "${{ steps.target.outputs.store_prev }}"
+          if [ "${{ steps.target.outputs.ml }}" = "true" ] && [ -n "${{ steps.target.outputs.ml_prev }}" ]; then trigger ml-service "$ML_HOOK" "${{ steps.target.outputs.ml_prev }}"; fi
+          echo "### ❌ Smoke test failed for ${{ steps.target.outputs.sha }}; rolled back to ${{ steps.target.outputs.store_prev }}. Database migrations are additive, so the previous build runs on the migrated schema." >> "$GITHUB_STEP_SUMMARY"

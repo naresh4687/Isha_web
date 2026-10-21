@@ -12,7 +12,8 @@
     "purge-events": "tsx src/scripts/purgeEvents.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "e2e:prepare": "tsx src/scripts/e2ePrepare.ts"
+    "e2e:prepare": "tsx src/scripts/e2ePrepare.ts",
+    "images:sync": "tsx src/scripts/imageSync.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -1,13 +1,13 @@
-# Keeps the free Render storefront awake so visitors don't wait ~50 s for a cold start.
-# Only the storefront is pinged: one service running all month (~744 h) fits Render's 750 free
-# instance-hours; keeping the ML service awake too would exceed them. The storefront already falls back
-# to popularity when the ML service is asleep, so a sleeping ML service doesn't slow pages down.
+# Keeps the free Render storefront awake during Indian daytime so visitors don't wait ~50 s for a cold start.
+# Render's 750 free instance-hours a month are shared by both services, so pings run only 02:00-18:59 UTC
+# (07:30-00:29 IST, ~530 h/month), leaving ~220 h for the ML service, which wakes on demand. The storefront
+# falls back to popularity while the ML service is asleep, so that doesn't slow pages down.
 # Set the repository variable KEEP_WARM=false to pause it, or STORE_URL to point it elsewhere.
 name: keep-warm
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/10 2-18 * * *'
   workflow_dispatch: {}
 
 permissions: {}
